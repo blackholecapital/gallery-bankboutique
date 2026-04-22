@@ -1,0 +1,21 @@
+:root {
+  --color-primary: 221 83% 53%;
+  --color-accent: 221 83% 62%;
+  --color-foreground: 222 47% 11%;
+  --color-muted-foreground: 220 9% 56%;
+  --color-surface: 0 0% 100%;
+  --color-app-bg: 220 33% 97%;
+  --color-border: 220 13% 92%;
+  --color-surface-raised: 216 33% 97%;
+}
+
+[data-theme='dark'] {
+  --color-primary: 221 83% 62%;
+  --color-accent: 221 83% 72%;
+  --color-foreground: 210 20% 98%;
+  --color-muted-foreground: 218 11% 68%;
+  --color-surface: 224 31% 14%;
+  --color-app-bg: 232 34% 10%;
+  --color-border: 217 19% 24%;
+  --color-surface-raised: 224 28% 18%;
+}

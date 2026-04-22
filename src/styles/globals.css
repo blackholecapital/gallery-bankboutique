@@ -1,0 +1,155 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@keyframes slide-in {
+  from { opacity: 0; transform: translateX(0); }
+  to { opacity: 1; transform: translateX(0); }
+}
+@keyframes card-enter {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-card-enter {
+  animation: card-enter 0.18s ease-out;
+}
+/* Staggered card entry — apply via inline style --stagger-delay */
+.animate-card-enter-stagger {
+  animation: card-enter 0.2s ease-out both;
+  animation-delay: var(--stagger-delay, 0ms);
+}
+/* Subtle breathing pulse for primary Add CTA */
+@keyframes add-breathe {
+  0%, 100% { box-shadow: 0 2px 4px rgba(37,99,235,0.4), 0 6px 16px -3px rgba(37,99,235,0.3); }
+  50% { box-shadow: 0 2px 6px rgba(37,99,235,0.48), 0 8px 20px -3px rgba(37,99,235,0.36); }
+}
+.animate-add-breathe:not(:disabled) {
+  animation: add-breathe 2.5s ease-in-out infinite;
+}
+/* Quick ripple flash on click */
+@keyframes add-ripple {
+  0% { opacity: 0.5; transform: scale(0.8); }
+  100% { opacity: 0; transform: scale(1.6); }
+}
+.add-ripple-effect {
+  position: relative;
+  overflow: hidden;
+}
+.add-ripple-effect::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(circle, rgba(255,255,255,0.4) 0%, transparent 70%);
+  opacity: 0;
+  pointer-events: none;
+}
+.add-ripple-effect:active::after {
+  animation: add-ripple 0.12s ease-out;
+}
+@keyframes slide-out-left {
+  from { opacity: 1; transform: translateX(0); }
+  to { opacity: 0; transform: translateX(-40px); }
+}
+@keyframes slide-out-right {
+  from { opacity: 1; transform: translateX(0); }
+  to { opacity: 0; transform: translateX(40px); }
+}
+
+.animate-slide-in {
+  animation: slide-in 0.2s ease-out;
+}
+.animate-slide-out-left {
+  animation: slide-out-left 0.25s ease-in forwards;
+}
+.animate-slide-out-right {
+  animation: slide-out-right 0.25s ease-in forwards;
+}
+
+/* Slow blue glow for Build nav icon when items exist */
+@keyframes build-glow {
+  0%, 100% { filter: drop-shadow(0 0 0px transparent); color: rgb(37 99 235); }
+  50% { filter: drop-shadow(0 0 6px rgba(37,99,235,0.5)); color: rgb(59 130 246); }
+}
+.animate-build-glow {
+  animation: build-glow 3s ease-in-out infinite;
+}
+
+/* Hide scrollbar on thumbnail rails and main content */
+.thumb-rail,
+main {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.thumb-rail::-webkit-scrollbar,
+main::-webkit-scrollbar {
+  display: none;
+}
+
+@layer base {
+  :root {
+    --color-primary: 221 83% 53%;
+    --color-accent: 221 83% 62%;
+    --color-foreground: 222 47% 11%;
+    --color-muted-foreground: 220 9% 56%;
+    --color-surface: 0 0% 100%;
+    --color-app-bg: 220 33% 97%;
+    --color-border: 220 13% 92%;
+    --color-surface-raised: 216 33% 97%;
+
+    --space-1: 0.25rem;
+    --space-2: 0.5rem;
+    --space-3: 0.75rem;
+    --space-4: 1rem;
+    --space-5: 1.25rem;
+    --space-6: 1.5rem;
+    --space-8: 2rem;
+    --space-10: 2.5rem;
+    --space-18: 4.5rem;
+
+    --font-sans: Inter, ui-sans-serif, system-ui, -apple-system, sans-serif;
+    --text-xs: 0.75rem;
+    --text-sm: 0.875rem;
+    --text-base: 1rem;
+    --text-lg: 1.125rem;
+    --text-xl: 1.25rem;
+
+    --radius-sm: 0.625rem;
+    --radius-md: 0.875rem;
+    --radius-lg: 1.25rem;
+    --radius-xl: 1.5rem;
+
+    --shadow-sm: 0 1px 4px rgb(17 24 39 / 0.04);
+    --shadow-md: 0 4px 16px -4px rgb(37 99 235 / 0.12);
+    --shadow-lg: 0 12px 32px -12px rgb(17 24 39 / 0.12);
+  }
+
+  [data-theme='dark'] {
+    --color-primary: 221 83% 62%;
+    --color-accent: 221 83% 72%;
+    --color-foreground: 210 20% 98%;
+    --color-muted-foreground: 218 11% 68%;
+    --color-surface: 224 31% 14%;
+    --color-app-bg: 232 34% 10%;
+    --color-border: 217 19% 24%;
+    --color-surface-raised: 224 28% 18%;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  html,
+  body,
+  #root {
+    margin: 0;
+    min-height: 100%;
+  }
+
+  body {
+    font-family: var(--font-sans);
+    font-size: var(--text-base);
+    background: hsl(var(--color-app-bg));
+    color: hsl(var(--color-foreground));
+  }
+}

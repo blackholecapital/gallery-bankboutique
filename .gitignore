@@ -1,0 +1,10 @@
+node_modules/
+dist/
+*.tsbuildinfo
+
+# Build artifacts from tsc composite projects
+vite.config.js
+vite.config.d.ts
+tailwind.config.js
+tailwind.config.d.ts
+postcss.config.d.ts

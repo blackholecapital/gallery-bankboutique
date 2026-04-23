@@ -1,0 +1,261 @@
+[JOB-GALLERY-SCHEMA-V1 | WORKER A | S1 | ARTIFACT]
+artifact: /job_site/schema_field_inventory.txt
+source: /job_site/product_source_of_truth (1).json
+scope: S1 field inventory only. No redesign. No code changes.
+
+========================================================================
+1. CURRENT JSON ROOT STRUCTURE
+========================================================================
+
+1.1 root
+    - type: object
+    - keys: ["products"]
+
+1.2 products
+    - type: array
+    - element_type: object (product record)
+    - count_in_source: 9
+    - element_names_in_order:
+        1. Studio            (productNumber: xyz.0444)
+        2. Gateway           (productNumber: xyz.0445)
+        3. Connect           (productNumber: xyz.0446)
+        4. PayMe Pro         (productNumber: xyz.0447)
+        5. Message Track     (productNumber: xyz.0448)
+        6. Showroom          (productNumber: xyz.0449)
+        7. Gallery           (productNumber: xyz.0450)
+        8. Biz Pages         (productNumber: xyz.0451)
+        9. Stickers          (productNumber: xyz.0452)
+
+========================================================================
+2. PRODUCT RECORD FIELDS (PER-ELEMENT)
+========================================================================
+
+2.1 name
+    - type: string
+    - present_on: all 9
+    - role: display card title
+
+2.2 productNumber
+    - type: string
+    - present_on: all 9
+    - pattern: "xyz.04xx"
+    - role: stable identifier / SKU-like slug
+
+2.3 oneLinePromise
+    - type: string
+    - present_on: all 9
+    - role: short marketing line
+
+2.4 showroomDescription
+    - type: string
+    - present_on: all 9
+    - role: showroom/gallery card description
+    - note: on 8 of 9 records it is identical to oneLinePromise; on Studio it is a separate short line
+
+2.5 buyerOutcome
+    - type: string
+    - present_on: all 9
+    - role: outcome / benefit line
+
+2.6 actionPath
+    - type: string
+    - present_on: all 9
+    - pattern: "/profile/<slug>"
+    - role: internal route for card CTA
+
+2.7 demoUrl
+    - type: string (URL)
+    - present_on: all 9
+    - pattern: "https://<slug>.xyz-labs.xyz/..."
+    - role: external demo link
+
+2.8 orderedImages
+    - type: array<string>
+    - element_type: string (relative path, leading "/")
+    - present_on: all 9
+    - length_range: 3–7
+    - role: desktop image set in display order
+    - path_shape: "/Name<N>.png" or "/slug<N>.png" (case varies)
+
+2.9 orderedImagesMobile
+    - type: array<string>
+    - element_type: string (relative path, leading "/")
+    - present_on: 5 of 9 (Message Track, Showroom, Gallery, Biz Pages, Stickers)
+    - absent_on: 4 of 9 (Studio, Gateway, Connect, PayMe Pro)
+    - role: mobile image set in display order
+    - path_shape: often "/slug<N>m.png" or "/slug<N>m.jpeg"
+
+2.10 bullets
+    - type: array<string>
+    - present_on: all 9
+    - length_range: 3–5
+    - role: feature/benefit bullet list
+
+2.11 pricing
+    - type: object
+    - present_on: all 9
+
+2.11.1 pricing.setup
+    - type: number (integer USD)
+    - present_on: all 9
+    - observed_values: 99, 199, 599, 999
+
+2.11.2 pricing.monthly
+    - type: number (integer USD)
+    - present_on: all 9
+    - observed_values: 10, 20
+
+========================================================================
+3. REPEATED STRUCTURES
+========================================================================
+
+3.1 product record
+    - repeats 9x under products[]
+    - identical key set except for orderedImagesMobile (present on 5, absent on 4)
+
+3.2 pricing
+    - repeats 9x, always {setup:number, monthly:number}
+    - no currency, no interval label, no tier, no trial, no tax/shipping fields
+
+3.3 image arrays
+    - orderedImages: repeats 9x
+    - orderedImagesMobile: repeats 5x
+    - both are flat string arrays, no per-image metadata (no alt, width, height, role, mime, main/thumbnail flag)
+
+3.4 path strings
+    - actionPath: repeats 9x, all "/profile/<slug>"
+    - demoUrl: repeats 9x, all "https://<slug>.xyz-labs.xyz/..."
+    - image paths: repeat as bare "/file.ext" strings
+
+========================================================================
+4. FIELDS MISSING RELATIVE TO GALLERY/ADMIN TARGET MODEL
+========================================================================
+(Required for the target domains siteConfig, cards, commerceConfig, meta
+as named in the build sheet. Listed as gaps in the current source.)
+
+4.1 siteConfig (entirely absent in current JSON)
+    4.1.1 storefront/site id
+    4.1.2 storefront/site name
+    4.1.3 tagline / hero title / hero subtitle
+    4.1.4 brand/theme tokens (primary color, accent color, background)
+    4.1.5 logo asset reference
+    4.1.6 favicon asset reference
+    4.1.7 custom domain / host
+    4.1.8 layout mode (gallery, swipe, grid)
+    4.1.9 active flag (storefront live/offline)
+    4.1.10 package tier / plan
+    4.1.11 card limit (max cards allowed by package)
+    4.1.12 default currency
+    4.1.13 locale / timezone
+    4.1.14 contact email / support channel
+
+4.2 cards (current "products[]" is the closest analog, but missing per-card admin fields)
+    4.2.1 card id (stable UUID or slug, distinct from productNumber)
+    4.2.2 active flag per card (active / inactive / draft)
+    4.2.3 order / sortIndex (explicit position, not array-implied)
+    4.2.4 createdAt / updatedAt per card
+    4.2.5 mainImage (explicit single main asset, not inferred from index 0)
+    4.2.6 thumbnail (explicit thumbnail asset)
+    4.2.7 media[] with per-asset metadata:
+          - id
+          - url / r2Key
+          - role (main | gallery | thumbnail | mobile)
+          - alt
+          - width
+          - height
+          - mime
+          - orderIndex
+    4.2.8 per-card pricing expansion:
+          - currency
+          - setup (present)
+          - monthly (present)
+          - interval label
+          - trial
+          - tax flag
+          - sku (vs current productNumber)
+    4.2.9 ctaLabel (button text)
+    4.2.10 ctaUrl (normalized external vs internal split)
+    4.2.11 category / tag array
+    4.2.12 longDescription (vs oneLinePromise + showroomDescription)
+    4.2.13 badge / labels (e.g., "new", "featured")
+    4.2.14 inventory / stock flag (if commerce-gated)
+
+4.3 commerceConfig (entirely absent in current JSON)
+    4.3.1 provider (e.g., payme, stripe, placeholder)
+    4.3.2 mode (test | live)
+    4.3.3 publishable key / public identifier
+    4.3.4 checkout url template
+    4.3.5 success redirect url
+    4.3.6 cancel redirect url
+    4.3.7 currency (storefront-level default if not per-card)
+    4.3.8 tax config (inclusive/exclusive, region)
+    4.3.9 coupon support flag
+    4.3.10 subscription support flag
+    4.3.11 webhook endpoint / secret reference
+
+4.4 meta (entirely absent in current JSON)
+    4.4.1 schemaVersion
+    4.4.2 generatedAt / lastPublishedAt
+    4.4.3 updatedAt
+    4.4.4 updatedBy (admin user reference)
+    4.4.5 source (manual | admin | migration)
+    4.4.6 environment (dev | staging | prod)
+    4.4.7 deploymentRef (Workers/Pages build id)
+    4.4.8 notes (free-text operator note)
+
+========================================================================
+5. FIELD SHAPE OBSERVATIONS RELEVANT TO MIGRATION
+========================================================================
+
+5.1 All image references are relative strings rooted at "/", implying
+    they resolve against the current site's /public. They are not
+    R2-qualified object keys or absolute public URLs.
+
+5.2 orderedImages index 0 is used as de-facto main image but is not
+    declared as main; target schema must make main explicit.
+
+5.3 orderedImagesMobile presence is inconsistent (5 of 9). Target
+    schema must either require it, allow fallback to desktop set,
+    or carry a boolean flag.
+
+5.4 productNumber is stable and unique across the 9 records and is
+    the best migration candidate for card id / sku. It is not a UUID.
+
+5.5 pricing carries only setup and monthly with no currency;
+    currency must be supplied by siteConfig or commerceConfig default
+    at migration time (assumed USD, not declared).
+
+5.6 actionPath is internal; demoUrl is external. Target schema should
+    separate ctaUrlInternal vs ctaUrlExternal or normalize to one
+    ctaUrl plus a ctaKind enum.
+
+5.7 showroomDescription duplicates oneLinePromise on 8 of 9 records;
+    target schema can collapse to a single short description with an
+    optional override, or keep both explicitly.
+
+5.8 No record carries active/inactive, order index, timestamps,
+    author, or any admin-editable metadata. All admin-layer fields
+    are gaps.
+
+========================================================================
+6. SUMMARY COUNTS
+========================================================================
+
+6.1 current top-level keys: 1 (products)
+6.2 current per-product keys: 10 (name, productNumber, oneLinePromise,
+    showroomDescription, buyerOutcome, actionPath, demoUrl,
+    orderedImages, bullets, pricing) + 1 optional (orderedImagesMobile)
+6.3 current pricing sub-keys: 2 (setup, monthly)
+6.4 target top-level domains required: 4 (siteConfig, cards,
+    commerceConfig, meta)
+6.5 current fields that map cleanly into cards: 10
+6.6 current fields with no target home and proposed to drop or fold:
+    0 hard-drops, 1 fold candidate (showroomDescription into card
+    description with override)
+6.7 net-new fields required by target model: see Section 4
+    (siteConfig: 14, cards-added: 14+ per-media sub-fields,
+    commerceConfig: 11, meta: 8)
+
+========================================================================
+7. END OF INVENTORY
+========================================================================

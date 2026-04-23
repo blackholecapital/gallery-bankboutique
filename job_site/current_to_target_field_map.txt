@@ -1,0 +1,254 @@
+[JOB-GALLERY-SCHEMA-V1 | WORKER A | S1 | ARTIFACT]
+artifact: /job_site/current_to_target_field_map.txt
+source_current: /job_site/product_source_of_truth (1).json
+target_domains: siteConfig | cards | commerceConfig | meta
+scope: S1 mapping only. No schema drafting, no code changes.
+
+========================================================================
+1. LEGEND
+========================================================================
+
+1.1 target_domain values: siteConfig | cards | commerceConfig | meta
+1.2 disposition values:
+    - MAP         = current field migrates directly into target domain
+    - TRANSFORM   = current field migrates with shape change
+    - SPLIT       = current field splits into multiple target fields
+    - FOLD        = current field folds into an existing target field
+    - DROP_CANDIDATE = redundant in current data, likely removed
+    - NEW         = no current field; must be supplied by admin/default
+1.3 notation: current.path  ->  target_domain.path
+
+========================================================================
+2. CURRENT -> TARGET MAP (PER CURRENT FIELD)
+========================================================================
+
+2.1 products[]
+    current: products (array<object>)
+    target: cards (array<object>)
+    disposition: TRANSFORM (rename products -> cards; enforce card limit
+                 from siteConfig.packageCardLimit)
+
+2.2 products[].name
+    current_type: string
+    target: cards[].title
+    disposition: MAP
+
+2.3 products[].productNumber
+    current_type: string ("xyz.04xx")
+    target: cards[].sku (primary) and cards[].id (derived if no UUID
+             assigned yet)
+    disposition: SPLIT
+    migration_note: treat productNumber as sku; generate a separate
+                    stable cards[].id (UUID or slug) at migration.
+
+2.4 products[].oneLinePromise
+    current_type: string
+    target: cards[].tagline
+    disposition: MAP
+
+2.5 products[].showroomDescription
+    current_type: string
+    target: cards[].description
+    disposition: FOLD
+    migration_note: on 8 of 9 records this equals oneLinePromise;
+                    when equal, fold into cards[].description using
+                    oneLinePromise value. When distinct (Studio),
+                    keep showroomDescription as cards[].description
+                    and keep oneLinePromise as cards[].tagline.
+
+2.6 products[].buyerOutcome
+    current_type: string
+    target: cards[].outcome
+    disposition: MAP
+
+2.7 products[].actionPath
+    current_type: string ("/profile/<slug>")
+    target: cards[].cta.internalPath
+    disposition: MAP
+    migration_note: pair with ctaKind = "internal" when demoUrl absent
+                    or not preferred.
+
+2.8 products[].demoUrl
+    current_type: string (absolute URL)
+    target: cards[].cta.externalUrl
+    disposition: MAP
+    migration_note: pair with ctaKind = "external" when demoUrl is
+                    the primary action.
+
+2.9 products[].orderedImages
+    current_type: array<string> (relative paths)
+    target: cards[].media[] with role="gallery" AND cards[].mainImage
+            (explicit, derived from index 0 at migration)
+    disposition: SPLIT
+    migration_note:
+      - index 0 -> cards[].mainImage = { url|r2Key, alt, role:"main" }
+      - indexes 1..n -> cards[].media[] with role:"gallery",
+        orderIndex preserved from array position.
+      - All strings must be promoted to structured media objects
+        carrying url or r2Key, alt, mime, width, height placeholders.
+
+2.10 products[].orderedImagesMobile
+    current_type: array<string>, present on 5 of 9
+    target: cards[].media[] with role="mobile"
+    disposition: MAP (conditional)
+    migration_note:
+      - If present, append as media entries with role="mobile" and
+        preserved orderIndex.
+      - If absent, leave mobile set empty and rely on siteConfig
+        fallback behavior (desktop media used on mobile).
+
+2.11 products[].bullets
+    current_type: array<string>
+    target: cards[].bullets
+    disposition: MAP
+
+2.12 products[].pricing
+    current_type: object
+    target: cards[].pricing
+    disposition: TRANSFORM
+    migration_note: expand with currency (default USD from
+                    commerceConfig.currency) and interval label.
+
+2.12.1 products[].pricing.setup
+    target: cards[].pricing.setup (number)
+    disposition: MAP
+
+2.12.2 products[].pricing.monthly
+    target: cards[].pricing.monthly (number)
+    disposition: MAP
+
+========================================================================
+3. FIELDS WITH NO CURRENT SOURCE (TARGET REQUIRES, MUST BE NEW)
+========================================================================
+
+3.1 siteConfig (NEW; entirely absent in current JSON)
+    3.1.1 siteConfig.siteId                (NEW)
+    3.1.2 siteConfig.siteName              (NEW)
+    3.1.3 siteConfig.heroTitle             (NEW)
+    3.1.4 siteConfig.heroSubtitle          (NEW)
+    3.1.5 siteConfig.theme.primaryColor    (NEW)
+    3.1.6 siteConfig.theme.accentColor     (NEW)
+    3.1.7 siteConfig.theme.background      (NEW)
+    3.1.8 siteConfig.logo                  (NEW; media ref)
+    3.1.9 siteConfig.favicon               (NEW; media ref)
+    3.1.10 siteConfig.customDomain         (NEW)
+    3.1.11 siteConfig.layoutMode           (NEW; enum: gallery|swipe|grid)
+    3.1.12 siteConfig.active               (NEW; boolean)
+    3.1.13 siteConfig.packageTier          (NEW)
+    3.1.14 siteConfig.packageCardLimit     (NEW; integer)
+    3.1.15 siteConfig.defaultCurrency      (NEW; default "USD")
+    3.1.16 siteConfig.locale               (NEW)
+    3.1.17 siteConfig.timezone             (NEW)
+    3.1.18 siteConfig.contactEmail         (NEW)
+
+3.2 cards[] admin/ops fields (NEW; no current source)
+    3.2.1 cards[].id                       (NEW or derived from slug)
+    3.2.2 cards[].active                   (NEW; boolean, default true)
+    3.2.3 cards[].status                   (NEW; enum: draft|active|inactive)
+    3.2.4 cards[].orderIndex               (NEW; explicit integer)
+    3.2.5 cards[].createdAt                (NEW; ISO timestamp)
+    3.2.6 cards[].updatedAt                (NEW; ISO timestamp)
+    3.2.7 cards[].mainImage                (NEW; derived at migration)
+    3.2.8 cards[].thumbnail                (NEW; admin-supplied)
+    3.2.9 cards[].media[].id               (NEW)
+    3.2.10 cards[].media[].alt             (NEW; admin-supplied)
+    3.2.11 cards[].media[].width           (NEW; probe or admin)
+    3.2.12 cards[].media[].height          (NEW; probe or admin)
+    3.2.13 cards[].media[].mime            (NEW; derive from extension)
+    3.2.14 cards[].media[].role            (NEW; main|gallery|mobile|thumbnail)
+    3.2.15 cards[].media[].orderIndex      (NEW; from array position)
+    3.2.16 cards[].media[].r2Key           (NEW; on R2 migration)
+    3.2.17 cards[].cta.kind                (NEW; enum: internal|external)
+    3.2.18 cards[].cta.label               (NEW; admin-supplied)
+    3.2.19 cards[].pricing.currency        (NEW; from commerceConfig)
+    3.2.20 cards[].pricing.interval        (NEW; default "monthly")
+    3.2.21 cards[].badges                  (NEW; array<string>)
+    3.2.22 cards[].tags                    (NEW; array<string>)
+
+3.3 commerceConfig (NEW; entirely absent in current JSON)
+    3.3.1 commerceConfig.provider          (NEW; enum)
+    3.3.2 commerceConfig.mode              (NEW; test|live)
+    3.3.3 commerceConfig.publishableKey    (NEW)
+    3.3.4 commerceConfig.checkoutUrlTemplate (NEW)
+    3.3.5 commerceConfig.successUrl        (NEW)
+    3.3.6 commerceConfig.cancelUrl         (NEW)
+    3.3.7 commerceConfig.currency          (NEW; default "USD")
+    3.3.8 commerceConfig.taxMode           (NEW)
+    3.3.9 commerceConfig.couponsEnabled    (NEW; boolean)
+    3.3.10 commerceConfig.subscriptionsEnabled (NEW; boolean)
+    3.3.11 commerceConfig.webhookRef       (NEW)
+
+3.4 meta (NEW; entirely absent in current JSON)
+    3.4.1 meta.schemaVersion               (NEW)
+    3.4.2 meta.generatedAt                 (NEW)
+    3.4.3 meta.updatedAt                   (NEW)
+    3.4.4 meta.updatedBy                   (NEW)
+    3.4.5 meta.source                      (NEW; manual|admin|migration)
+    3.4.6 meta.environment                 (NEW; dev|staging|prod)
+    3.4.7 meta.deploymentRef               (NEW)
+    3.4.8 meta.notes                       (NEW)
+
+========================================================================
+4. DROP / FOLD CANDIDATES
+========================================================================
+
+4.1 products[].showroomDescription
+    disposition: FOLD into cards[].description (see 2.5).
+    rationale: duplicates oneLinePromise on 8 of 9 records.
+    manual_admin_required: confirm Studio case where values differ.
+
+4.2 No other current field is a hard drop. All remaining fields have
+    deterministic targets.
+
+========================================================================
+5. PLACEHOLDERS REQUIRING MANUAL ADMIN COMPLETION AT MIGRATION
+========================================================================
+
+5.1 All siteConfig fields (Section 3.1) — no current source.
+5.2 All commerceConfig fields (Section 3.3) — no current source.
+5.3 All meta fields (Section 3.4) — no current source; partially
+    auto-populated by migration tooling (schemaVersion, source,
+    generatedAt).
+5.4 cards[].media[] metadata (alt, width, height, mime, r2Key) —
+    partial auto-derive (mime from extension, width/height via probe),
+    remainder requires admin entry.
+5.5 cards[].thumbnail — no current source; admin-supplied or derived
+    by resizing cards[].mainImage at migration tooling stage.
+5.6 cards[].cta.kind and cards[].cta.label — no current source; admin
+    supplies label, kind chosen per record based on which of
+    actionPath or demoUrl is the primary action.
+5.7 cards[].pricing.currency and cards[].pricing.interval — not
+    declared in source; defaults from commerceConfig.currency and
+    "monthly" respectively.
+5.8 Mobile media for Studio, Gateway, Connect, PayMe Pro — absent in
+    source (see 2.10); siteConfig fallback or admin upload required.
+
+========================================================================
+6. CONSOLIDATED MAP TABLE (QUICK REFERENCE)
+========================================================================
+
+| current path                              | target path                          | disposition |
+|-------------------------------------------|--------------------------------------|-------------|
+| products                                  | cards                                | TRANSFORM   |
+| products[].name                           | cards[].title                        | MAP         |
+| products[].productNumber                  | cards[].sku                          | SPLIT       |
+| products[].productNumber                  | cards[].id (derived)                 | SPLIT       |
+| products[].oneLinePromise                 | cards[].tagline                      | MAP         |
+| products[].showroomDescription            | cards[].description                  | FOLD        |
+| products[].buyerOutcome                   | cards[].outcome                      | MAP         |
+| products[].actionPath                     | cards[].cta.internalPath             | MAP         |
+| products[].demoUrl                        | cards[].cta.externalUrl              | MAP         |
+| products[].orderedImages[0]               | cards[].mainImage                    | SPLIT       |
+| products[].orderedImages[1..n]            | cards[].media[] (role:gallery)       | SPLIT       |
+| products[].orderedImagesMobile[]          | cards[].media[] (role:mobile)        | MAP         |
+| products[].bullets                        | cards[].bullets                      | MAP         |
+| products[].pricing                        | cards[].pricing                      | TRANSFORM   |
+| products[].pricing.setup                  | cards[].pricing.setup                | MAP         |
+| products[].pricing.monthly                | cards[].pricing.monthly              | MAP         |
+| (none)                                    | siteConfig.*                         | NEW         |
+| (none)                                    | commerceConfig.*                     | NEW         |
+| (none)                                    | meta.*                               | NEW         |
+
+========================================================================
+7. END OF MAP
+========================================================================

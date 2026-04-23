@@ -1,0 +1,190 @@
+SCHEMA CONSTRAINTS FROM CODE
+job_id: JOB-GALLERY-SCHEMA-V1
+worker: WORKER B
+stage: S1
+source: gallery-bankboutique-main (repo at /home/user/gallery-bankboutique)
+scope: data-flow / invariant constraints only; no field additions, no redesign.
+
+================================================================
+DOMAIN: cards — type & invariant constraints
+================================================================
+
+C-CARD-01  id is a string. Used verbatim as the prefix of PayMe line_item
+           product_id values ("${id}_setup", "${id}_monthly") and must
+           survive round-tripping to the payment API unchanged.
+           ref: CartCheckoutBoundary.tsx:141,149
+
+C-CARD-02  name must be non-empty and must slugify to a stable, unique
+           value per card. The slug is the route id and the estimate
+           persistence key (estimateState.ts:72,109,114).
+           Slug rule: name.toLowerCase().replace(/[^a-z0-9]+/g,'-')
+                      .replace(/(^-|-$)/g,'')
+           ref: Product.ts:250-251
+           Implication: two cards with names that slugify identically will
+           collide in the estimate and the router.
+
+C-CARD-03  getProductById matches on BOTH the raw id field AND the slug
+           derived from name. Schema must treat card.id and slug(name)
+           as mutually-unique across the dataset.
+           ref: Product.ts getProductById; estimateState.ts:33-38
+
+C-CARD-04  orderedImages is an array of strings. Minimum length 1 for the
+           hero/carousel to render. Items are URL strings (absolute or
+           root-relative); code does no transform.
+           ref: InitialSwipeProductCard.tsx:75; ExpandedProfileCard.tsx:86
+
+C-CARD-05  orderedMobileImages, when present, is parallel to orderedImages
+           by INDEX and may contain nulls (skip entries). Length should
+           match orderedImages to be meaningful.
+           ref: Product.ts:13
+
+C-CARD-06  bullets is a tuple of >=3 strings (TS enforced).
+           ref: Product.ts:14
+
+C-CARD-07  price, setupPrice, monthlyPrice are numbers in USD DOLLARS, not
+           cents. Conversion to cents happens at API boundary:
+             Math.round(price * 100)
+           Values may be 0; zero-valued line items are dropped before send.
+           ref: CartCheckoutBoundary.tsx:135-136,139-140,147
+
+C-CARD-08  price is written on every fixture but read nowhere in the UI.
+           Schema must still accept it (legacy/back-compat).
+           ref: Product.ts:15; grep of repo for .price usage
+
+C-CARD-09  promoCode and promoDiscountPercent are either both present or
+           both absent in practice. Per-card promo is only honored when
+           every card in the active cart carries the same promoCode.
+           ref: CartCheckoutBoundary.tsx:29-35
+
+C-CARD-10  No active/inactive flag, no stock field, no ordering/sort key
+           exists today. Card display order = array order in the dataset.
+
+================================================================
+DOMAIN: siteConfig — invariant constraints
+================================================================
+
+C-SITE-01  Currency is 'usd' everywhere the code touches commerce. Schema
+           may expose currency but the UI currently assumes a single ISO
+           code per dataset.
+           ref: CartCheckoutBoundary.tsx:165; PayMeCheckoutCard.tsx
+
+C-SITE-02  Theme tokens are static CSS variables, not JSON. Adding them
+           to schema is permitted but the current chassis reads them from
+           src/styles/tokens/colors.css, not from data.
+           ref: src/styles/tokens/colors.css; ThemeProvider.tsx
+
+C-SITE-03  localStorage keys that must not be renamed without a migration:
+             'artist-connect.estimate.v1'   (estimate/cart state)
+             'artist-connect.theme.mode'    (theme preference)
+             'payme_usdc_address'           (admin USDC override)
+
+================================================================
+DOMAIN: commerceConfig — invariant constraints
+================================================================
+
+C-COMM-01  Checkout create URL is currently hardcoded in
+           CartCheckoutBoundary.tsx:8 as 'https://api.xyz-labs.xyz' +
+           '/checkout/create'. A sibling env-driven constant exists in
+           paymeConfig.ts (PAYME_WORKER_URL) but is not referenced from
+           the cart boundary. Schema-supplied URL must flow into the
+           cart boundary, not just paymeConfig.ts.
+
+C-COMM-02  Checkout status URL is hardcoded at
+           CheckoutConfirmPage.tsx:5 as
+           'https://api.xyz-labs.xyz/checkout/status'.
+
+C-COMM-03  Checkout request mode is 'subscription' whenever any line item
+           has a monthly recurring leg; the boundary always sends
+           mode:'subscription'. Schema must not break that assumption.
+           ref: CartCheckoutBoundary.tsx:164
+
+C-COMM-04  Payment method enum consumed by the UI is exactly:
+             'card' | 'apple_pay' | 'google_pay' | 'usdc'
+           USDC is handled client-side (no API round-trip at pay time);
+           card / apple_pay / google_pay all POST to checkout/create.
+           ref: PayMeCheckoutCard.tsx PaymentMethod; CartCheckoutBoundary.tsx:117-120
+
+C-COMM-05  Global promo codes are constants in source (Product.ts:25-28):
+             LAUNCH30 => 30% off setup subtotal
+             USDC     => 10% off the already-discounted total, stacking,
+                         and only when method==='usdc'
+           ref: CartCheckoutBoundary.tsx:22-27,58-60
+
+C-COMM-06  Discount proportional attribution: when a promo reduces the
+           setup subtotal by D, each card's setup line is scaled by
+           (setupSubtotal - D) / setupSubtotal before cents rounding.
+           Schema must not alter this invariant.
+           ref: CartCheckoutBoundary.tsx:130-135
+
+C-COMM-07  Line item unit_amount is an INTEGER number of cents
+           (Math.round). Any schema-supplied prices must remain safely
+           convertible (no floats that round to the wrong cent).
+           ref: CartCheckoutBoundary.tsx:135-136
+
+C-COMM-08  USDC receive address has two sources, priority order:
+             1. localStorage[USDC_STORAGE_KEY]  (admin override)
+             2. DEFAULT_USDC_RECEIVE_ADDRESS    (compiled-in fallback)
+           Schema-supplied default must map to source 2; admin override
+           continues to live in localStorage, not in the dataset.
+           ref: receiveAddress.ts:11,23-29
+
+C-COMM-09  USDC chain params are constants; schema may expose them but
+           any deviation from BASE mainnet will break the wallet flow:
+             contract   0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913
+             decimals   6
+             chainId    8453
+           ref: receiveAddress.ts:20-21; useBaseWallet.ts
+
+C-COMM-10  Metadata fields sent on every checkout:
+             source_origin = window.location.origin  (runtime)
+             source_app    = VITE_PAYME_SOURCE_APP || 'gallery'
+             promo_code    = applied code or ''
+           Only source_app is schema-sourced.
+           ref: CartCheckoutBoundary.tsx:168-172; paymeConfig.ts:5-6
+
+================================================================
+DOMAIN: meta — invariant constraints
+================================================================
+
+C-META-01  No meta fields are read by the UI today. Any meta object the
+           schema introduces is unconstrained by current code; however,
+           if a version field is added, the estimate-store key
+           'artist-connect.estimate.v1' is INDEPENDENT and must not be
+           derived from it.
+
+================================================================
+ADMIN / DATA-FLOW INVARIANTS
+================================================================
+
+C-FLOW-01  Product data is loaded via static import (productFixtures),
+           not fetched. A schema-driven loader must provide the same
+           Product[] shape before the rest of the app runs, because
+           EstimateProvider initial state and fixture lookups execute
+           synchronously at import time (estimateState.ts:27-31).
+
+C-FLOW-02  Estimate persistence stores ONLY { productId, addedAt } tuples
+           (productId = slug). On rehydrate, unknown slugs are dropped
+           silently (estimateState.ts:50-51). Renaming a card therefore
+           orphans prior carts.
+
+C-FLOW-03  Dedup of cart items is by product.name (estimateState.ts:54,
+           reducer line 103). Names must be unique per dataset.
+
+C-FLOW-04  Admin writes do NOT mutate the dataset. The only admin-driven
+           persisted value today is the USDC address, stored in
+           localStorage. Schema need not carry admin-editable product
+           state; it needs to remain compatible with a future admin that
+           replaces the static fixture.
+           ref: AdminPage.tsx:21-34
+
+C-FLOW-05  No R2, Cloudflare Worker, or signed-URL references appear in
+           source. Image URLs are consumed raw. Any R2 convention added
+           later must yield strings that are valid <img src> URLs without
+           client-side rewriting, because UI code performs none.
+
+C-FLOW-06  Package/card-limit enforcement is absent from code. No
+           constraint in this stage blocks the schema from adding such a
+           limit, but removing an existing card must not break estimates
+           referencing it (see C-FLOW-02).
+
+END

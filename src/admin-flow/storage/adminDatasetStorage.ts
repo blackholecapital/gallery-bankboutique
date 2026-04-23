@@ -3,6 +3,8 @@ import { normalizeAdminDataset } from '@/admin-flow/normalizers/adminDatasetNorm
 import { validateAdminDataset } from '@/admin-flow/schema/adminSchemaValidator';
 import type { AdminDataset, LoadResult, ValidationResult } from '@/admin-flow/types';
 
+const LEGACY_ADMIN_DATASET_STORAGE_KEY = 'admin.gallery.dataset.v1';
+
 function sortKeysDeep<T>(value: T): T {
   if (Array.isArray(value)) {
     return value.map((item) => sortKeysDeep(item)) as T;
@@ -22,22 +24,22 @@ function stableStringify(value: unknown): string {
   return JSON.stringify(sortKeysDeep(value), null, 2);
 }
 
-export function loadAdminDataset(): LoadResult {
-  if (typeof window === 'undefined') {
-    const dataset = normalizeAdminDataset(DEFAULT_ADMIN_DATASET);
-    return {
-      dataset,
-      validation: validateAdminDataset(dataset),
-      source: 'default',
-    };
-  }
+function resolveStoredDatasetRaw(): string | null {
+  if (typeof window === 'undefined') return null;
+  return (
+    window.localStorage.getItem(ADMIN_DATASET_STORAGE_KEY) ??
+    window.localStorage.getItem(LEGACY_ADMIN_DATASET_STORAGE_KEY)
+  );
+}
 
-  const raw = window.localStorage.getItem(ADMIN_DATASET_STORAGE_KEY);
+export function loadAdminDataset(): LoadResult {
+  const fallback = normalizeAdminDataset(DEFAULT_ADMIN_DATASET);
+
+  const raw = resolveStoredDatasetRaw();
   if (!raw) {
-    const dataset = normalizeAdminDataset(DEFAULT_ADMIN_DATASET);
     return {
-      dataset,
-      validation: validateAdminDataset(dataset),
+      dataset: fallback,
+      validation: validateAdminDataset(fallback),
       source: 'default',
     };
   }
@@ -51,17 +53,16 @@ export function loadAdminDataset(): LoadResult {
       source: 'storage',
     };
   } catch {
-    const dataset = normalizeAdminDataset(DEFAULT_ADMIN_DATASET);
-    const validation = validateAdminDataset(dataset);
+    const validation = validateAdminDataset(fallback);
     validation.errors.unshift({
       severity: 'error',
       ruleId: 'C-LOAD-01',
       path: '/',
-      message: 'Stored admin dataset is invalid JSON; using default dataset.',
+      message: 'Stored admin dataset is invalid JSON; using fixture dataset.',
     });
 
     return {
-      dataset,
+      dataset: fallback,
       validation,
       source: 'default',
     };

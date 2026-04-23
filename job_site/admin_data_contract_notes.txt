@@ -16,3 +16,14 @@ Contract alignment notes (S2 data layer)
 
 5) Scope isolation
 - Utilities are self-contained under src/admin-flow/* and do not alter renderer shells.
+
+5) Explicit repo mapping for S2 contract-backed behavior
+- Load contract (`loadAdminDataset`) and save contract (`saveAdminDataset`) are implemented in `src/admin-flow/storage/adminDatasetStorage.ts` and enforced via `src/admin-flow/schema/adminSchemaValidator.ts`.
+- Schema-shaped normalization contract is implemented in `src/admin-flow/normalizers/adminDatasetNormalizer.ts`.
+- Fixture-to-runtime hydration contract is implemented through `src/admin-flow/constants.ts` (fixture import/default dataset), `src/admin-flow/fixtures/gallery_schema_example_v1.json` (payload), and `src/admin-flow/hooks/useAdminDataset.ts` (initial load/reload/save path).
+- Dataset-to-checkout hydration compatibility is implemented in `src/checkout-path/receiveAddress.ts`.
+
+repo_evidence_snapshot:
+- branch: work
+- commit_hashes: 24121f02f2f3080e78228cb0131169f8759a2297, f35443550648261fbef760f964a4f2c713d43044
+- merge_head: 632dd908abfdb89db69ce86cc8ae4f4b3f18ed9c

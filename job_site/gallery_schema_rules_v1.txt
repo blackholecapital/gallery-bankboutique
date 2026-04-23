@@ -1,0 +1,389 @@
+GALLERY SCHEMA RULES v1
+job_id: JOB-GALLERY-SCHEMA-V1
+worker: WORKER A
+stage: S2
+artifact: /job_site/gallery_schema_rules_v1.txt
+companion_schema: /job_site/gallery_schema_spec_v1.json
+scope: Validation rules, defaults, limits, and active/inactive behavior.
+       No implementation code. No redesign.
+
+================================================================
+1. TOP-LEVEL STRUCTURE
+================================================================
+
+R-ROOT-01  The dataset root is an object with EXACTLY four keys:
+             siteConfig     (object, required)
+             cards          (array,  required)
+             commerceConfig (object, required)
+             meta           (object, required)
+           No additional top-level keys are permitted.
+
+R-ROOT-02  All dates use ISO-8601 UTC date-time strings
+           (e.g. "2026-04-23T00:00:00.000Z").
+
+R-ROOT-03  All monetary amounts on cards[].pricing are whole currency
+           units (dollars, not cents). Conversion to cents happens at
+           the checkout API boundary as Math.round(amount * 100).
+
+R-ROOT-04  All string length maxima are declared per field in the
+           companion JSON schema. Validators MUST enforce them.
+
+================================================================
+2. siteConfig RULES
+================================================================
+
+R-SITE-01  required: siteId, siteName, brandName, layoutMode, active,
+           packageTier, packageCardLimit, defaultCurrency, theme.
+
+R-SITE-02  siteId is immutable after first publish. Pattern
+           ^[a-z0-9][a-z0-9-]{1,62}[a-z0-9]$. Length 3..64.
+
+R-SITE-03  brandName replaces the hardcoded "Factory Product Gallery"
+           label in HomePage.tsx.
+
+R-SITE-04  layoutMode enum: gallery | swipe | grid. Default: gallery.
+
+R-SITE-05  defaultCurrency: ISO-4217 uppercase three-letter code.
+           Default "USD". Cards with no explicit pricing.currency
+           inherit this value.
+
+R-SITE-06  theme.mode enum: light | dark | system. Default "light".
+           Persisted preference remains in localStorage key
+           "artist-connect.theme.mode" and is NOT part of this schema.
+
+R-SITE-07  customDomain, contactEmail, logo, favicon are optional and
+           may be null.
+
+R-SITE-08  fallbacks.useDesktopImagesOnMobile defaults to true. When
+           true, cards may omit media entries with role="mobile" and
+           gallery desktop media are rendered on mobile.
+
+R-SITE-09  active=false collapses the storefront to an offline state.
+           No cards are rendered regardless of per-card status.
+
+================================================================
+3. cards RULES
+================================================================
+
+R-CARD-01  cards is an array. Order in the array is advisory; the
+           canonical display order is cards[].orderIndex ascending.
+
+R-CARD-02  Required per card: id, sku, title, tagline, outcome,
+           bullets, mainImage, media, cta, pricing, status, active,
+           orderIndex, createdAt, updatedAt.
+
+R-CARD-03  id is a stable string used verbatim as the PayMe line_item
+           product_id prefix ("${id}_setup", "${id}_monthly"). It must
+           survive round-trip to the payment API unchanged.
+           Pattern ^[A-Za-z0-9][A-Za-z0-9._-]{1,62}[A-Za-z0-9]$.
+
+R-CARD-04  id MUST be unique across cards[].
+
+R-CARD-05  sku MUST be unique across cards[].
+
+R-CARD-06  title MUST be non-empty and its slug MUST be unique across
+           cards[]. Slug rule (matches Product.ts:250-251):
+             slug = title.toLowerCase()
+                         .replace(/[^a-z0-9]+/g,'-')
+                         .replace(/(^-|-$)/g,'')
+           Cards whose titles slugify to the same value are invalid
+           (slug is the route id and the estimate persistence key).
+
+R-CARD-07  bullets has minItems=3 and maxItems=8. Each bullet is a
+           non-empty string up to 200 chars.
+
+R-CARD-08  orderedImages (legacy) is not a schema field. All image
+           data lives in cards[].mainImage and cards[].media[].
+
+R-CARD-09  mainImage is required and contains the hero asset.
+           Carousel order is mainImage first, then media entries with
+           role="gallery" ordered by orderIndex ascending.
+
+R-CARD-10  media has minItems=1 and maxItems=20. Every media entry
+           MUST include id, role, orderIndex, and exactly one of
+           {url, r2Key} (enforced by oneOf in the JSON schema).
+
+R-CARD-11  media[].role enum: main | gallery | mobile | thumbnail.
+           There MUST be at most one entry with role="main" and at
+           most one entry with role="thumbnail" per card. Entries
+           with role="mobile" are parallel-by-orderIndex to
+           role="gallery" entries and may be sparse.
+
+R-CARD-12  media[].orderIndex is unique per role within a card.
+
+R-CARD-13  media[].url is an absolute or root-relative string that is
+           a valid <img src> without client-side rewriting.
+           media[].r2Key is an R2 object key resolved to a public URL
+           at publish time per /job_site/r2_asset_conventions (S3).
+
+R-CARD-14  cta.kind=internal REQUIRES cta.internalPath (pattern
+           ^/[A-Za-z0-9/_-]{1,255}$).
+           cta.kind=external REQUIRES cta.externalUrl (absolute URI).
+
+R-CARD-15  pricing.setup and pricing.monthly are numbers in whole
+           currency units, minimum 0, maximum 1,000,000, precision to
+           two decimals (multipleOf 0.01). Zero-valued legs drop the
+           corresponding checkout line item at the API boundary.
+
+R-CARD-16  pricing.currency, when omitted, inherits commerceConfig
+           .currency and ultimately siteConfig.defaultCurrency.
+
+R-CARD-17  pricing.interval enum: month | year | none. Default
+           "month". pricing.intervalLabel is the UI suffix (default
+           "mo").
+
+R-CARD-18  pricing.price is a legacy field. Validators MUST accept it
+           when present but UIs MUST NOT read it.
+
+R-CARD-19  promoCode and promoDiscountPercent are either both present
+           (non-null) or both null/absent. A per-card promo is
+           honored at checkout only when every card in the cart
+           carries the same promoCode.
+
+R-CARD-20  status enum: draft | active | inactive.
+           - draft    : editor-only; never rendered; never counted
+                        toward packageCardLimit.
+           - active   : rendered when siteConfig.active=true; counted
+                        toward packageCardLimit.
+           - inactive : hidden from visitors; kept in dataset; never
+                        counted toward packageCardLimit.
+
+R-CARD-21  active (boolean) is a runtime mirror of status:
+             status=active    => active MUST be true
+             status=draft     => active MUST be false
+             status=inactive  => active MUST be false
+           Validators reject mismatches.
+
+R-CARD-22  orderIndex is a 0-based integer, unique across cards[].
+           Gaps are permitted. Rendering sorts by orderIndex asc.
+
+R-CARD-23  Deactivating a card (status: active -> inactive) MUST NOT
+           delete the card or its media; estimate/cart rehydration
+           MUST continue to resolve the slug (orphaning policy lives
+           in admin contract, not in the schema).
+
+R-CARD-24  Renaming a card (title change) changes its slug and
+           orphans any existing cart references (estimateState.ts
+           drops unknown slugs silently). Validators MUST NOT block
+           renames but admin tooling SHOULD warn.
+
+================================================================
+4. PACKAGE / CARD-LIMIT ENFORCEMENT
+================================================================
+
+R-LIMIT-01 siteConfig.packageCardLimit is an integer in [0, 500].
+           It is the maximum number of cards[] entries with
+           status="active" allowed for this site.
+
+R-LIMIT-02 Enforcement is evaluated on write (save/publish) as:
+             count(cards[].status == "active") <= packageCardLimit
+           Validators MUST fail the dataset when this is exceeded.
+
+R-LIMIT-03 Drafts and inactive cards are NOT counted toward the
+           limit. Operators may store up to cards[] maxItems=500
+           total regardless of packageTier.
+
+R-LIMIT-04 Attempting to flip a card from draft/inactive to active
+           while already at the limit MUST be rejected. The admin
+           surface MUST surface this as a user-facing error
+           (contract defined in S3 admin_contract).
+
+R-LIMIT-05 packageTier suggests the default packageCardLimit but
+           does NOT override an explicit packageCardLimit value.
+           Suggested defaults (advisory only, not enforced by schema):
+             starter    =>  3
+             studio     =>  9
+             pro        => 25
+             enterprise => 100
+             custom     => explicit
+
+R-LIMIT-06 Reducing packageCardLimit below the current active count
+           MUST be rejected. Operator must first deactivate enough
+           cards to comply.
+
+================================================================
+5. ACTIVE / INACTIVE BEHAVIOR
+================================================================
+
+R-STATE-01 siteConfig.active=false        => entire storefront offline.
+                                              No cards rendered. CTAs
+                                              suppressed. Limit check
+                                              still applies on save.
+
+R-STATE-02 siteConfig.active=true AND
+           cards[i].status="active" AND
+           cards[i].active=true         => card is rendered in gallery
+                                              and reachable via slug
+                                              route.
+
+R-STATE-03 cards[i].status="inactive"    => card hidden from gallery
+                                              and lightbox. Direct slug
+                                              route responds 404 at the
+                                              UI layer. Estimate entries
+                                              pointing at this slug
+                                              remain in localStorage but
+                                              are dropped on rehydrate
+                                              (existing behavior).
+
+R-STATE-04 cards[i].status="draft"       => card visible only in admin
+                                              preview. Never rendered on
+                                              public surfaces. Never
+                                              counted toward card limit.
+
+R-STATE-05 Transitions:
+             draft     -> active    (limit check)
+             draft     -> inactive  (no limit change)
+             active    -> inactive  (frees a slot under the limit)
+             inactive  -> active    (limit check)
+             active    -> draft     (frees a slot; hides card)
+             inactive  -> draft     (no limit change)
+           All transitions MUST update cards[i].updatedAt.
+
+R-STATE-06 Deletion is a separate operation from state transitions and
+           is governed by the admin contract (S3), not the schema.
+
+================================================================
+6. commerceConfig RULES
+================================================================
+
+R-COMM-01  required: provider, mode, currency, checkoutCreateUrl,
+           checkoutStatusUrl, sourceApp, paymentMethods, usdc.
+
+R-COMM-02  provider enum: payme | stripe | placeholder. Default
+           "payme". mode enum: test | live. Default "test".
+
+R-COMM-03  checkoutCreateUrl and checkoutStatusUrl are absolute URIs
+           that REPLACE the hardcoded 'https://api.xyz-labs.xyz/...'
+           strings in CartCheckoutBoundary.tsx and
+           CheckoutConfirmPage.tsx. Consumers MUST read these values
+           from the dataset, not from paymeConfig.ts.
+
+R-COMM-04  checkoutMode default "subscription". Boundary always sends
+           subscription mode today; schema preserves this default.
+
+R-COMM-05  paymentMethods is a non-empty unique array drawn from
+           {card, apple_pay, google_pay, usdc}. This enum exactly
+           mirrors PayMeCheckoutCard.
+
+R-COMM-06  successUrlTemplate and cancelUrlTemplate support the
+           {origin} placeholder substituted at runtime from
+           window.location.origin. Defaults:
+             success: "{origin}/checkout/confirm"
+             cancel:  "{origin}/cart"
+
+R-COMM-07  sourceApp is the value sent as metadata.source_app.
+           Default "gallery" (matches VITE_PAYME_SOURCE_APP fallback).
+
+R-COMM-08  promos:
+             launchParty.code  default "LAUNCH30", percentOff 30
+                               (applies to setup subtotal).
+             usdc.code         default "USDC",     percentOff 10,
+                               stacks=true, methodScope="usdc".
+           Schema accepts custom values but the application invariants
+           (setup-subtotal attribution, USDC stacking) remain in code.
+
+R-COMM-09  usdc block:
+             contract   default 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913
+             decimals   const 6
+             chainId    const 8453 (BASE mainnet)
+             receiveAddress  0x-40-hex
+           Admin-set runtime override lives in localStorage
+           "payme_usdc_address" and is NOT part of this schema.
+
+R-COMM-10  Cents conversion rule at the API boundary:
+             unit_amount_cents = Math.round(amount_usd * 100)
+           pricing.setup / pricing.monthly values MUST be numbers that
+           round to the intended cent value without drift.
+
+================================================================
+7. meta RULES
+================================================================
+
+R-META-01  required: schemaVersion, generatedAt, updatedAt, source,
+           environment.
+
+R-META-02  schemaVersion MUST equal "gallery-schema-v1".
+
+R-META-03  source enum: manual | admin | migration.
+           environment enum: dev | staging | prod.
+
+R-META-04  updatedAt MUST change on every write that mutates any
+           field outside meta itself.
+
+R-META-05  lastPublishedAt is updated only on publish.
+
+R-META-06  meta fields are NOT read by the current UI. The estimate
+           storage key "artist-connect.estimate.v1" is independent
+           of schemaVersion and MUST NOT be derived from it.
+
+================================================================
+8. DEFAULTS SUMMARY
+================================================================
+
+siteConfig.layoutMode           = "gallery"
+siteConfig.defaultCurrency      = "USD"
+siteConfig.locale               = "en-US"
+siteConfig.timezone             = "UTC"
+siteConfig.theme.mode           = "light"
+siteConfig.fallbacks.useDesktopImagesOnMobile = true
+
+cards[].cta.label               = "View"
+cards[].pricing.currency        = (inherit)
+cards[].pricing.interval        = "month"
+cards[].pricing.intervalLabel   = "mo"
+cards[].tags                    = []
+cards[].badges                  = []
+
+commerceConfig.provider         = "payme"
+commerceConfig.mode             = "test"
+commerceConfig.currency         = "USD"
+commerceConfig.checkoutMode     = "subscription"
+commerceConfig.sourceApp        = "gallery"
+commerceConfig.successUrlTemplate = "{origin}/checkout/confirm"
+commerceConfig.cancelUrlTemplate  = "{origin}/cart"
+commerceConfig.paymentMethods   = ["card","apple_pay","google_pay","usdc"]
+commerceConfig.couponsEnabled   = true
+commerceConfig.subscriptionsEnabled = true
+commerceConfig.taxMode          = "none"
+
+================================================================
+9. LIMIT SUMMARY
+================================================================
+
+cards maxItems                       500
+siteConfig.packageCardLimit range    0..500
+siteConfig string maxima             siteName 120, brandName 80,
+                                     heroTitle 160, heroSubtitle 240,
+                                     tagline 200
+card string maxima                   title 80, tagline 160,
+                                     description 1000, outcome 240,
+                                     bullet 200, tag 40, badge 24
+card array maxima                    bullets 3..8, media 1..20,
+                                     tags 0..20, badges 0..6
+media maxima                         per-media-alt 240,
+                                     r2Key 1024, url 2048,
+                                     width/height 1..16384
+pricing amounts                      0..1_000_000, step 0.01
+commerce url maxima                  checkout* 2048, webhookRef 256
+
+================================================================
+10. VALIDATION RESULT CONVENTIONS
+================================================================
+
+R-VAL-01   A dataset is VALID only when:
+             (a) it conforms to gallery_schema_spec_v1.json, AND
+             (b) all cross-field rules R-CARD-04..06, R-CARD-11,
+                 R-CARD-12, R-CARD-14, R-CARD-19, R-CARD-21, and
+                 R-LIMIT-02, R-LIMIT-06 pass.
+
+R-VAL-02   Validators MUST report rule ids (R-*-NN) in error output
+           so admin UI can localize/explain them.
+
+R-VAL-03   Schema-only warnings (non-fatal): missing optional media
+           width/height/mime, missing mobile media when
+           fallbacks.useDesktopImagesOnMobile=false, missing
+           thumbnail on an active card.
+
+================================================================
+END
+================================================================

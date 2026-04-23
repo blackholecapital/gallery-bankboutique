@@ -1,0 +1,130 @@
+ADMIN CONTRACT v1 - PART 2
+job_id: JOB-GALLERY-SCHEMA-V1
+worker: WORKER B
+stage: S3
+scope: Card create/update/deactivate rules, package-limit enforcement,
+       save/load expectations. Field mapping is in PART 1.
+companion_schema: /job_site/gallery_schema_spec_v1.json
+companion_rules:  /job_site/gallery_schema_rules_v1.txt
+
+================================================================
+1. CARD CREATE
+================================================================
+C-CREATE-01  Admin allocates cards[i].id (pattern per R-CARD-03);
+             unique across cards[] (R-CARD-04). Immutable once saved.
+C-CREATE-02  sku unique across cards[] (R-CARD-05).
+C-CREATE-03  title required; slug(title) unique across cards[]
+             (R-CARD-06).
+C-CREATE-04  bullets: >=3, <=8 (R-CARD-07).
+C-CREATE-05  mainImage required; media[] has >=1 entry (R-CARD-09,10).
+C-CREATE-06  cta.kind selects required leg: internal=>internalPath,
+             external=>externalUrl (R-CARD-14).
+C-CREATE-07  Default status="draft", active=false. If created with
+             status="active", limit check per C-LIMIT-01 applies.
+C-CREATE-08  orderIndex: admin assigns next free integer in [0,999],
+             unique across cards[] (R-CARD-22).
+C-CREATE-09  createdAt = updatedAt = now (ISO-8601 UTC, R-ROOT-02).
+C-CREATE-10  pricing.setup/monthly in whole currency units
+             (R-ROOT-03, R-CARD-15). pricing.price mirrored from
+             pricing.setup for legacy write-through (R-CARD-18).
+
+================================================================
+2. CARD UPDATE
+================================================================
+C-UPDATE-01 id, createdAt never change after create.
+C-UPDATE-02 active is derived from status; never set directly
+             (R-CARD-21). status transitions per R-STATE-05.
+C-UPDATE-03 status: draft|inactive -> active is a limit-gated
+             transition (C-LIMIT-02).
+C-UPDATE-04 Renaming title changes slug and orphans cart/estimate
+             entries. Admin SHOULD warn; MUST NOT block (R-CARD-24).
+C-UPDATE-05 promoCode and promoDiscountPercent are co-required:
+             both null or both non-null (R-CARD-19).
+C-UPDATE-06 Any mutation sets cards[i].updatedAt and meta.updatedAt
+             (R-META-04, R-STATE-05).
+C-UPDATE-07 Changing pricing.currency does not retroactively convert
+             amounts; admin presents numeric value as-is.
+C-UPDATE-08 media[] edits preserve per-role orderIndex uniqueness
+             (R-CARD-12) and at-most-one main/thumbnail (R-CARD-11).
+             Exactly one of url|r2Key per entry (R-CARD-10).
+
+================================================================
+3. CARD DEACTIVATE / DELETE
+================================================================
+C-DEACT-01  Deactivation = status: active -> inactive. Card, media,
+             and pricing are preserved (R-CARD-23). Frees one slot
+             under packageCardLimit (R-STATE-05).
+C-DEACT-02  status=inactive hides card from public surfaces and 404s
+             the slug route (R-STATE-03). Card remains editable.
+C-DEACT-03  status=draft hides card from all public surfaces and
+             frees a slot if previously active (R-STATE-04, 05).
+C-DEACT-04  Delete is a distinct destructive action (R-STATE-06).
+             Admin MUST require explicit confirmation, remove the
+             cards[] entry, and set meta.updatedAt. Delete does NOT
+             bypass limit rules (limit is on active count, not total).
+
+================================================================
+4. PACKAGE-LIMIT ENFORCEMENT
+================================================================
+C-LIMIT-01  On save/publish: count(cards[].status=="active") MUST be
+             <= siteConfig.packageCardLimit (R-LIMIT-02). Over-limit
+             datasets are rejected.
+C-LIMIT-02  Admin MUST reject activation (draft|inactive -> active)
+             when already at the limit, surfacing a user-facing error
+             citing R-LIMIT-04.
+C-LIMIT-03  Admin MUST reject reducing packageCardLimit below the
+             current active count (R-LIMIT-06). Operator must
+             deactivate first.
+C-LIMIT-04  Drafts and inactive cards do not count (R-LIMIT-03).
+             cards[] hard max is 500 regardless of tier.
+C-LIMIT-05  packageTier selection MAY suggest a default
+             packageCardLimit (R-LIMIT-05); admin does not auto-apply
+             it over an explicit value.
+C-LIMIT-06  siteConfig.active=false does not exempt the save-time
+             limit check (R-STATE-01).
+
+================================================================
+5. SAVE
+================================================================
+C-SAVE-01   Save validates the full dataset against
+             gallery_schema_spec_v1.json plus cross-field rules
+             enumerated in R-VAL-01. Failing validation blocks save.
+C-SAVE-02   Save stamps meta.updatedAt = now. Does NOT update
+             meta.lastPublishedAt.
+C-SAVE-03   Save sets meta.source="admin" and meta.updatedBy to the
+             authenticated admin identifier.
+C-SAVE-04   meta.schemaVersion MUST remain "gallery-schema-v1"
+             (R-META-02). Admin never writes this field.
+C-SAVE-05   Errors are reported with rule ids (R-VAL-02) and the
+             offending JSON path. No partial writes.
+
+================================================================
+6. PUBLISH
+================================================================
+C-PUB-01    Publish re-runs C-SAVE-01 validation before promotion.
+C-PUB-02    Publish stamps meta.lastPublishedAt = now (R-META-05)
+             and meta.updatedAt = now.
+C-PUB-03    Publish locks siteConfig.siteId permanently (R-SITE-02).
+C-PUB-04    Publish resolves media[].r2Key / mediaRef.r2Key to
+             public URLs per r2_asset_conventions at publish time.
+
+================================================================
+7. LOAD
+================================================================
+C-LOAD-01   Admin loads the canonical dataset and presents it using
+             the PART 1 mapping. Read-only (R) fields render
+             disabled.
+C-LOAD-02   Unknown or additional top-level keys cause a load error
+             (R-ROOT-01, additionalProperties=false).
+C-LOAD-03   Legacy pricing.price is displayed read-only and
+             round-tripped unchanged (R-CARD-18).
+C-LOAD-04   Schema-only warnings (R-VAL-03) render as non-blocking
+             notices: missing optional media width/height/mime,
+             missing mobile media when fallbacks=false, missing
+             thumbnail on an active card.
+C-LOAD-05   Date fields render in siteConfig.timezone; stored values
+             remain ISO-8601 UTC (R-ROOT-02).
+
+================================================================
+END OF PART 2
+================================================================

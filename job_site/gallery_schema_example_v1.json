@@ -1,0 +1,424 @@
+{
+  "siteConfig": {
+    "siteId": "bank-boutique",
+    "siteName": "Bank Boutique Gallery",
+    "brandName": "Bank Boutique",
+    "heroTitle": "Launch surfaces for modern product drops",
+    "heroSubtitle": "A curated gallery of deploy-ready storefront products.",
+    "tagline": "Ship polished product surfaces in days, not quarters.",
+    "layoutMode": "gallery",
+    "active": true,
+    "packageTier": "studio",
+    "packageCardLimit": 9,
+    "defaultCurrency": "USD",
+    "locale": "en-US",
+    "timezone": "America/New_York",
+    "customDomain": "gallery.bankboutique.com",
+    "contactEmail": "orders@bankboutique.com",
+    "logo": {
+      "role": "logo",
+      "r2Key": "sites/bank-boutique/brand/logo.svg",
+      "alt": "Bank Boutique",
+      "width": 512,
+      "height": 128,
+      "mime": "image/svg+xml"
+    },
+    "favicon": {
+      "role": "favicon",
+      "r2Key": "sites/bank-boutique/brand/favicon.png",
+      "alt": "",
+      "width": 64,
+      "height": 64,
+      "mime": "image/png"
+    },
+    "theme": {
+      "mode": "dark",
+      "primaryColor": "#0B5FFF",
+      "accentColor": "#F5A524",
+      "background": "#0A0A0A",
+      "foreground": "#F5F5F5",
+      "surface": "#141414",
+      "border": "#2A2A2A"
+    },
+    "fallbacks": {
+      "useDesktopImagesOnMobile": true
+    }
+  },
+
+  "cards": [
+    {
+      "id": "studio",
+      "sku": "xyz.0444",
+      "title": "Studio",
+      "tagline": "Design and deploy polished business pages fast.",
+      "description": "Studio is a drag-and-drop page builder with real-time preview and branded templates. Launch business pages to a custom domain with mobile-responsive output by default.",
+      "outcome": "Go from idea to live page in minutes with drag-and-drop tools.",
+      "bullets": [
+        "Drag-and-drop page builder with real-time preview",
+        "Polished launch surfaces for any product or service",
+        "Branded page templates with custom fonts and colors",
+        "One-click deploy to your own domain",
+        "Mobile-responsive output by default"
+      ],
+      "mainImage": {
+        "role": "main",
+        "r2Key": "sites/bank-boutique/cards/studio/main/Studio1.png",
+        "alt": "Studio page builder preview",
+        "width": 1600,
+        "height": 1000,
+        "mime": "image/png"
+      },
+      "thumbnail": {
+        "role": "thumbnail",
+        "r2Key": "sites/bank-boutique/cards/studio/thumbnail/Studio1-thumb.webp",
+        "alt": "Studio thumbnail",
+        "width": 480,
+        "height": 300,
+        "mime": "image/webp"
+      },
+      "media": [
+        {
+          "id": "studio-gallery-01",
+          "role": "gallery",
+          "orderIndex": 0,
+          "r2Key": "sites/bank-boutique/cards/studio/gallery/Studio1.png",
+          "alt": "Studio builder canvas",
+          "width": 1600,
+          "height": 1000,
+          "mime": "image/png"
+        },
+        {
+          "id": "studio-gallery-02",
+          "role": "gallery",
+          "orderIndex": 1,
+          "r2Key": "sites/bank-boutique/cards/studio/gallery/Studio2.png",
+          "alt": "Studio template picker",
+          "width": 1600,
+          "height": 1000,
+          "mime": "image/png"
+        },
+        {
+          "id": "studio-gallery-03",
+          "role": "gallery",
+          "orderIndex": 2,
+          "r2Key": "sites/bank-boutique/cards/studio/gallery/Studio3.png",
+          "alt": "Studio live preview",
+          "width": 1600,
+          "height": 1000,
+          "mime": "image/png"
+        },
+        {
+          "id": "studio-mobile-01",
+          "role": "mobile",
+          "orderIndex": 0,
+          "r2Key": "sites/bank-boutique/cards/studio/mobile/Studio1m.png",
+          "alt": "Studio builder canvas (mobile)",
+          "width": 750,
+          "height": 1334,
+          "mime": "image/png"
+        },
+        {
+          "id": "studio-mobile-02",
+          "role": "mobile",
+          "orderIndex": 1,
+          "r2Key": "sites/bank-boutique/cards/studio/mobile/Studio2m.png",
+          "alt": "Studio template picker (mobile)",
+          "width": 750,
+          "height": 1334,
+          "mime": "image/png"
+        },
+        {
+          "id": "studio-thumbnail-01",
+          "role": "thumbnail",
+          "orderIndex": 0,
+          "r2Key": "sites/bank-boutique/cards/studio/thumbnail/Studio1-thumb.webp",
+          "alt": "Studio thumbnail",
+          "width": 480,
+          "height": 300,
+          "mime": "image/webp"
+        }
+      ],
+      "cta": {
+        "kind": "internal",
+        "label": "View",
+        "internalPath": "/profile/studio"
+      },
+      "pricing": {
+        "setup": 199.00,
+        "monthly": 20.00,
+        "currency": "USD",
+        "interval": "month",
+        "intervalLabel": "mo",
+        "price": 199.00,
+        "trial": null,
+        "taxInclusive": false
+      },
+      "tags": ["page-builder", "launch", "no-code"],
+      "badges": ["featured"],
+      "promoCode": null,
+      "promoDiscountPercent": null,
+      "status": "active",
+      "active": true,
+      "orderIndex": 0,
+      "liveDemoUrl": "https://studio.xyz-labs.xyz/",
+      "videoDemoUrl": null,
+      "createdAt": "2026-02-14T17:22:04.000Z",
+      "updatedAt": "2026-04-22T09:15:40.000Z"
+    },
+
+    {
+      "id": "gateway",
+      "sku": "xyz.0445",
+      "title": "Gateway",
+      "tagline": "Your web business front end, ready to run.",
+      "description": "Gateway ships a complete storefront with integrated checkout, customer service routing, and guided onboarding. Built for operators who need commerce live on day one.",
+      "outcome": "Launch a complete storefront with checkout and customer tools built in.",
+      "bullets": [
+        "Integrated checkout and payment processing",
+        "Built-in customer service area with ticket routing",
+        "Business-in-a-box setup with guided onboarding",
+        "Upgrade-ready customer flows for subscriptions and upsells"
+      ],
+      "mainImage": {
+        "role": "main",
+        "r2Key": "sites/bank-boutique/cards/gateway/main/Gateway1.png",
+        "alt": "Gateway storefront overview",
+        "width": 1600,
+        "height": 1000,
+        "mime": "image/png"
+      },
+      "thumbnail": {
+        "role": "thumbnail",
+        "r2Key": "sites/bank-boutique/cards/gateway/thumbnail/Gateway1-thumb.webp",
+        "alt": "Gateway thumbnail",
+        "width": 480,
+        "height": 300,
+        "mime": "image/webp"
+      },
+      "media": [
+        {
+          "id": "gateway-gallery-01",
+          "role": "gallery",
+          "orderIndex": 0,
+          "r2Key": "sites/bank-boutique/cards/gateway/gallery/Gateway1.png",
+          "alt": "Gateway storefront overview",
+          "width": 1600,
+          "height": 1000,
+          "mime": "image/png"
+        },
+        {
+          "id": "gateway-gallery-02",
+          "role": "gallery",
+          "orderIndex": 1,
+          "r2Key": "sites/bank-boutique/cards/gateway/gallery/Gateway2.png",
+          "alt": "Gateway checkout flow",
+          "width": 1600,
+          "height": 1000,
+          "mime": "image/png"
+        },
+        {
+          "id": "gateway-gallery-03",
+          "role": "gallery",
+          "orderIndex": 2,
+          "r2Key": "sites/bank-boutique/cards/gateway/gallery/Gateway3.png",
+          "alt": "Gateway customer service routing",
+          "width": 1600,
+          "height": 1000,
+          "mime": "image/png"
+        },
+        {
+          "id": "gateway-gallery-04",
+          "role": "gallery",
+          "orderIndex": 3,
+          "r2Key": "sites/bank-boutique/cards/gateway/gallery/Gateway4.png",
+          "alt": "Gateway subscription upsell",
+          "width": 1600,
+          "height": 1000,
+          "mime": "image/png"
+        },
+        {
+          "id": "gateway-mobile-01",
+          "role": "mobile",
+          "orderIndex": 0,
+          "r2Key": "sites/bank-boutique/cards/gateway/mobile/Gateway1m.png",
+          "alt": "Gateway storefront (mobile)",
+          "width": 750,
+          "height": 1334,
+          "mime": "image/png"
+        },
+        {
+          "id": "gateway-thumbnail-01",
+          "role": "thumbnail",
+          "orderIndex": 0,
+          "r2Key": "sites/bank-boutique/cards/gateway/thumbnail/Gateway1-thumb.webp",
+          "alt": "Gateway thumbnail",
+          "width": 480,
+          "height": 300,
+          "mime": "image/webp"
+        }
+      ],
+      "cta": {
+        "kind": "internal",
+        "label": "View",
+        "internalPath": "/profile/gateway"
+      },
+      "pricing": {
+        "setup": 999.00,
+        "monthly": 20.00,
+        "currency": "USD",
+        "interval": "month",
+        "intervalLabel": "mo",
+        "price": 999.00,
+        "trial": {
+          "days": 14
+        },
+        "taxInclusive": false
+      },
+      "tags": ["storefront", "checkout", "crm"],
+      "badges": ["popular"],
+      "promoCode": "LAUNCH30",
+      "promoDiscountPercent": 30,
+      "status": "active",
+      "active": true,
+      "orderIndex": 1,
+      "liveDemoUrl": "https://gateway.xyz-labs.xyz/",
+      "videoDemoUrl": "https://videos.bankboutique.com/gateway-tour.mp4",
+      "createdAt": "2026-02-14T17:22:04.000Z",
+      "updatedAt": "2026-04-22T09:15:40.000Z"
+    },
+
+    {
+      "id": "connect",
+      "sku": "xyz.0446",
+      "title": "Connect",
+      "tagline": "Customer access and connection tools.",
+      "description": "Connect is a branded audience hub with community touchpoints, referral tracking, and a social presentation layer for content and announcements.",
+      "outcome": "Grow and engage your audience from one branded hub.",
+      "bullets": [
+        "Community touchpoints across web, mobile, and social",
+        "Branded interaction surfaces with your look and feel",
+        "Built-in audience growth tools and referral tracking",
+        "Social presentation layer for content and announcements"
+      ],
+      "mainImage": {
+        "role": "main",
+        "r2Key": "sites/bank-boutique/cards/connect/main/connect1.png",
+        "alt": "Connect audience hub",
+        "width": 1600,
+        "height": 1000,
+        "mime": "image/png"
+      },
+      "thumbnail": null,
+      "media": [
+        {
+          "id": "connect-gallery-01",
+          "role": "gallery",
+          "orderIndex": 0,
+          "r2Key": "sites/bank-boutique/cards/connect/gallery/connect1.png",
+          "alt": "Connect audience hub",
+          "width": 1600,
+          "height": 1000,
+          "mime": "image/png"
+        },
+        {
+          "id": "connect-gallery-02",
+          "role": "gallery",
+          "orderIndex": 1,
+          "r2Key": "sites/bank-boutique/cards/connect/gallery/connect2.png",
+          "alt": "Connect community feed",
+          "width": 1600,
+          "height": 1000,
+          "mime": "image/png"
+        },
+        {
+          "id": "connect-gallery-03",
+          "role": "gallery",
+          "orderIndex": 2,
+          "r2Key": "sites/bank-boutique/cards/connect/gallery/connect3.png",
+          "alt": "Connect referral tracking",
+          "width": 1600,
+          "height": 1000,
+          "mime": "image/png"
+        }
+      ],
+      "cta": {
+        "kind": "internal",
+        "label": "View",
+        "internalPath": "/profile/connect"
+      },
+      "pricing": {
+        "setup": 99.00,
+        "monthly": 10.00,
+        "currency": "USD",
+        "interval": "month",
+        "intervalLabel": "mo",
+        "price": 99.00,
+        "trial": null,
+        "taxInclusive": false
+      },
+      "tags": ["community", "audience", "social"],
+      "badges": ["new"],
+      "promoCode": null,
+      "promoDiscountPercent": null,
+      "status": "active",
+      "active": true,
+      "orderIndex": 2,
+      "liveDemoUrl": "https://connect.xyz-labs.xyz/",
+      "videoDemoUrl": null,
+      "createdAt": "2026-03-02T11:08:17.000Z",
+      "updatedAt": "2026-04-22T09:15:40.000Z"
+    }
+  ],
+
+  "commerceConfig": {
+    "provider": "payme",
+    "mode": "test",
+    "currency": "USD",
+    "publishableKey": "pk_test_REPLACE_WITH_OPERATOR_KEY",
+    "checkoutCreateUrl": "https://api.xyz-labs.xyz/checkout/create",
+    "checkoutStatusUrl": "https://api.xyz-labs.xyz/checkout/status",
+    "successUrlTemplate": "{origin}/checkout/confirm",
+    "cancelUrlTemplate": "{origin}/cart",
+    "sourceApp": "gallery",
+    "checkoutMode": "subscription",
+    "paymentMethods": ["card", "apple_pay", "google_pay", "usdc"],
+    "couponsEnabled": true,
+    "subscriptionsEnabled": true,
+    "taxMode": "none",
+    "webhookRef": "whk_REPLACE_WITH_OPERATOR_WEBHOOK",
+    "promos": {
+      "launchParty": {
+        "code": "LAUNCH30",
+        "percentOff": 30,
+        "label": "Launch Party - 30% off setup",
+        "stacks": false,
+        "methodScope": null
+      },
+      "usdc": {
+        "code": "USDC",
+        "percentOff": 10,
+        "label": "USDC - 10% off when paying with USDC",
+        "stacks": true,
+        "methodScope": "usdc"
+      }
+    },
+    "usdc": {
+      "receiveAddress": "0x0000000000000000000000000000000000000000",
+      "contract": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+      "decimals": 6,
+      "chainId": 8453
+    }
+  },
+
+  "meta": {
+    "schemaVersion": "gallery-schema-v1",
+    "generatedAt": "2026-04-23T00:00:00.000Z",
+    "updatedAt": "2026-04-23T00:00:00.000Z",
+    "lastPublishedAt": "2026-04-22T09:15:40.000Z",
+    "updatedBy": "admin@bankboutique.com",
+    "source": "manual",
+    "environment": "staging",
+    "deploymentRef": "pages-deploy-2026-04-22-001",
+    "notes": "Canonical example for JOB-GALLERY-SCHEMA-V1 S2. Three active cards under a studio-tier site. R2 keys follow sites/{siteId}/cards/{cardId}/{role}/{filename}; replace publishableKey, webhookRef, and usdc.receiveAddress before production."
+  }
+}

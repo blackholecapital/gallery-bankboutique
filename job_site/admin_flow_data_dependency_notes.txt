@@ -1,0 +1,79 @@
+[JOB-GALLERY-ADMIN-FLOW-V1 | WORKER B | S1 | RESULT]
+status: PASS
+
+scope:
+- Audit current data flow and extract minimum schema load/save + renderer compatibility dependencies for `/admin`.
+
+required_references_status:
+- Reviewed: /job_site/gallery_schema_spec_v1.json
+- Reviewed: /job_site/gallery_schema_rules_v1.txt
+- Reviewed: /job_site/gallery_schema_example_v1.json
+- Reviewed: /job_site/admin_contract_v1.txt
+- Reviewed equivalent manual in repo: /job_site/worker-execution-manual-v1.1 (1).txt
+- Missing in environment: /mnt/data/gallery-bankboutique-main (1).zip, /mnt/data/worker-execution-manual-v1.1.txt
+
+current_runtime_data_dependencies (exact):
+1) Renderer primary dataset source
+   - `src/product-intake-model/Product.ts` exports `productFixtures`.
+   - Browse/profile/cart/checkout all consume fixture-derived `Product` objects.
+
+2) Browse + profile read path
+   - `BrowseSurfacePage` indexes/swipes `productFixtures` directly.
+   - `ExpandedProfileCard` resolves card by slug/id using `getProductById` + `productFixtures`.
+
+3) Estimate/cart persistence path
+   - Estimate state persists to localStorage key `artist-connect.estimate.v1`.
+   - Persisted basket IDs are slugified product names and rehydrated through `getProductById`.
+
+4) Checkout payload dependency path
+   - `PayMeBoundary` maps estimate items/active product into checkout `line_items` via `mapBasketToCheckoutRequest`.
+   - `CartCheckoutBoundary` builds checkout request body from `Product` fields (`id`, `name`, `setupPrice`, `monthlyPrice`).
+   - `CartCheckoutBoundary` posts to hardcoded `https://api.xyz-labs.xyz/checkout/create`.
+   - `PayMeBoundary` uses env-backed `PAYME_WORKER_URL` fallback.
+
+5) Current admin dependency path
+   - `AdminPage` only writes `payme_usdc_address` to localStorage.
+   - `getReceiveAddress()` in `receiveAddress.ts` reads that key for checkout display/USDC instructions.
+
+minimum schema-backed admin dependencies required for compatibility:
+A) Canonical admin dataset contract
+- Admin must load/save one canonical object with exact root keys:
+  `siteConfig`, `cards`, `commerceConfig`, `meta` (no extra top-level keys).
+
+B) Renderer adapter dependency (must exist before S4 complete)
+- Schema `cards[]` must map deterministically to current `Product` runtime fields required today:
+  - id <- cards[i].id
+  - name <- cards[i].title (or explicit adapter mapping choice, but stable)
+  - oneLinePromise <- cards[i].tagline
+  - buyerOutcome <- cards[i].outcome
+  - bullets <- cards[i].bullets
+  - setupPrice <- cards[i].pricing.setup
+  - monthlyPrice <- cards[i].pricing.monthly
+  - monthlyLabel <- cards[i].pricing.intervalLabel
+  - promoCode <- cards[i].promoCode
+  - promoDiscountPercent <- cards[i].promoDiscountPercent
+  - orderedImages/orderedMobileImages <- cards[i].media[] grouped by role/orderIndex with fallback rules
+  - liveDemoUrl <- cards[i].liveDemoUrl
+  - videoDemoUrl <- cards[i].videoDemoUrl
+
+C) Card visibility dependency for renderer safety
+- Public renderer must consume only cards with `status="active"` and `active=true` mirror behavior.
+- Draft/inactive cards must not appear in browse/profile/cart entry points.
+
+D) Checkout dependency migration requirements
+- Checkout endpoints currently split across hardcoded constant + env fallback; schema-backed admin requires one source via `commerceConfig`:
+  - checkoutCreateUrl
+  - checkoutStatusUrl
+  - sourceApp
+  - checkoutMode
+  - currency/payment methods
+- USDC destination should come from `commerceConfig.usdc.receiveAddress` with explicit compatibility rule for existing localStorage override behavior.
+
+E) Metadata dependency requirements
+- Save path must set `meta.updatedAt`, `meta.source="admin"`, `meta.updatedBy`.
+- Publish path must set `meta.lastPublishedAt`.
+- `meta.schemaVersion` remains constant and immutable in admin UI.
+
+handoff_constraints_for_S2_S4:
+- S2 must deliver deterministic dataset storage + adapter hooks so S3 UI and S4 renderer binding use same canonical object.
+- S4 must update renderer data source to consume schema-backed adapter output without changing existing route contracts.

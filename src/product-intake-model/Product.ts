@@ -27,7 +27,7 @@ export const GLOBAL_PROMOS = {
   usdc: { code: 'USDC', percentOff: 10, label: 'Extra 10% OFF with USDC on Everything' }
 } as const;
 
-export const productFixtures: Product[] = [
+const defaultProductFixtures: Product[] = [
   {
     id: 'xyz.0444',
     name: 'Studio',
@@ -240,6 +240,99 @@ export const productFixtures: Product[] = [
     promoDiscountPercent: 30
   }
 ];
+
+type AdminDatasetCard = {
+  id: string;
+  title: string;
+  tagline: string;
+  outcome: string;
+  bullets: string[];
+  status: 'draft' | 'active' | 'inactive';
+  active: boolean;
+  orderIndex: number;
+  liveDemoUrl?: string | null;
+  videoDemoUrl?: string | null;
+  promoCode?: string | null;
+  promoDiscountPercent?: number | null;
+  pricing: {
+    setup: number;
+    monthly: number;
+    intervalLabel?: string;
+  };
+  media: Array<{ role: string; orderIndex: number; url?: string; r2Key?: string }>
+  mainImage?: { url?: string; r2Key?: string };
+};
+
+type AdminDatasetLike = {
+  cards?: AdminDatasetCard[];
+};
+
+const ADMIN_DATASET_STORAGE_KEY = 'artist-connect.admin.dataset.v1';
+
+function toRenderableAsset(url?: string, r2Key?: string): string | null {
+  if (url && url.trim()) return url.trim();
+  if (!r2Key || !r2Key.trim()) return null;
+  const filename = r2Key.split('/').filter(Boolean).pop();
+  return filename ? `/${filename}` : null;
+}
+
+function adaptAdminCardToProduct(card: AdminDatasetCard): Product {
+  const gallery = card.media
+    .filter((item) => item.role === 'gallery')
+    .sort((a, b) => a.orderIndex - b.orderIndex)
+    .map((item) => toRenderableAsset(item.url, item.r2Key))
+    .filter((item): item is string => Boolean(item));
+
+  const mobile = card.media
+    .filter((item) => item.role === 'mobile')
+    .sort((a, b) => a.orderIndex - b.orderIndex)
+    .map((item) => toRenderableAsset(item.url, item.r2Key));
+
+  const mainImage = toRenderableAsset(card.mainImage?.url, card.mainImage?.r2Key);
+  const orderedImages = gallery.length > 0 ? gallery : mainImage ? [mainImage] : defaultProductFixtures[0].orderedImages;
+  const orderedMobileImages = mobile.length > 0 ? mobile : undefined;
+
+  return {
+    id: card.id,
+    name: card.title,
+    oneLinePromise: card.tagline,
+    buyerOutcome: card.outcome,
+    actionPath: `/product/${slugifyProductName(card.title)}`,
+    orderedImages,
+    orderedMobileImages,
+    bullets: card.bullets.length >= 3
+      ? ([card.bullets[0], card.bullets[1], card.bullets[2], ...card.bullets.slice(3)] as [string, string, string, ...string[]])
+      : ['Coming soon', 'Coming soon', 'Coming soon'],
+    price: card.pricing.setup,
+    setupPrice: card.pricing.setup,
+    monthlyPrice: card.pricing.monthly,
+    monthlyLabel: card.pricing.intervalLabel,
+    liveDemoUrl: card.liveDemoUrl ?? undefined,
+    videoDemoUrl: card.videoDemoUrl ?? null,
+    promoCode: card.promoCode ?? undefined,
+    promoDiscountPercent: card.promoDiscountPercent ?? undefined,
+  };
+}
+
+function resolveRuntimeProducts(): Product[] {
+  if (typeof window === 'undefined') return defaultProductFixtures;
+  const raw = window.localStorage.getItem(ADMIN_DATASET_STORAGE_KEY);
+  if (!raw) return defaultProductFixtures;
+
+  try {
+    const parsed = JSON.parse(raw) as AdminDatasetLike;
+    const activeCards = (parsed.cards ?? [])
+      .filter((card) => card.status === 'active' && card.active)
+      .sort((a, b) => a.orderIndex - b.orderIndex);
+
+    if (activeCards.length === 0) return defaultProductFixtures;
+    return activeCards.map(adaptAdminCardToProduct);
+  } catch {
+    return defaultProductFixtures;
+  }
+}
+
+export const productFixtures: Product[] = resolveRuntimeProducts();
 
 export function getProductById(id: string): Product | undefined {
   return productFixtures.find(

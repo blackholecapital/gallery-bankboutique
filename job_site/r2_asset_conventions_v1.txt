@@ -1,0 +1,322 @@
+R2 ASSET CONVENTIONS v1
+job_id: JOB-GALLERY-SCHEMA-V1
+worker: WORKER A
+stage: S3
+artifact: /job_site/r2_asset_conventions_v1.txt
+companions:
+  /job_site/gallery_schema_spec_v1.json
+  /job_site/gallery_schema_rules_v1.txt
+scope: R2 object-key format, public URL resolution, main/thumbnail
+       handling, replacement/update behavior, accepted media formats.
+       No implementation code. No redesign beyond schema scope.
+
+================================================================
+1. OBSERVED R2 ENVIRONMENT
+================================================================
+
+1.1  organization:        *** .xyz Labs ***
+1.2  bucket:              media-assets2
+1.3  default_storage:     Standard
+1.4  public_access:       Enabled
+1.5  public_host:         media-assets2.xyz-labs.xyz
+1.6  custom_domain:       https://media-assets2.xyz-labs.xyz/
+1.7  observed_prefixes:   gallery-assets/, "showroom media/"
+1.8  observed_object:     Stick3.png (image/png, Standard)
+
+================================================================
+2. OBJECT-KEY FORMAT (CANONICAL)
+================================================================
+
+2.1 canonical_root_prefix
+    All gallery-schema-v1 assets MUST live under the single top-level
+    prefix:
+        gallery-assets/
+    The legacy prefix "showroom media/" (with a space) is READ-ONLY
+    legacy and MUST NOT be written to by new tooling.
+
+2.2 canonical_key_template
+    gallery-assets/{siteId}/{cardId}/{role}/{orderIndex}-{slug}.{ext}
+
+    Field-by-field:
+      siteId       - from siteConfig.siteId
+                     pattern ^[a-z0-9][a-z0-9-]{1,62}[a-z0-9]$
+      cardId       - from cards[].id, lowercased
+                     pattern ^[a-z0-9][a-z0-9._-]{1,62}[a-z0-9]$
+      role         - one of: main | gallery | mobile | thumbnail
+      orderIndex   - zero-padded 2-digit integer, 00..99
+                     (matches mediaAsset.orderIndex)
+      slug         - short descriptive slug, lowercased,
+                     a-z 0-9 and '-' only, 1..40 chars
+      ext          - lowercase extension drawn from the MIME map in
+                     section 6.1 (png | jpg | webp | avif | gif | svg)
+
+2.3 single-asset site-level keys
+    Site-level single assets (logo, favicon) use:
+        gallery-assets/{siteId}/_site/{role}/{slug}.{ext}
+    where role is one of: logo | favicon.
+
+2.4 key_constraints
+    - All segments are NFC-normalized, lowercase ASCII.
+    - No spaces, no parentheses, no URL-unsafe characters.
+      (Validator rejects ' ', '(', ')', '%', '#', '?'.)
+    - Total key length MUST be <= 1024 chars (matches schema
+      mediaAsset.r2Key maxLength).
+    - Keys are case-sensitive in R2; writers MUST lowercase at mint
+      time and NEVER rely on case-only differences.
+    - Keys are immutable once published. See section 5 for updates.
+
+2.5 key_examples
+    gallery-assets/bank-boutique/studio/main/00-hero.png
+    gallery-assets/bank-boutique/studio/gallery/01-workflow.webp
+    gallery-assets/bank-boutique/studio/gallery/02-results.webp
+    gallery-assets/bank-boutique/studio/mobile/01-workflow-m.webp
+    gallery-assets/bank-boutique/studio/thumbnail/00-thumb.webp
+    gallery-assets/bank-boutique/_site/logo/logo.svg
+    gallery-assets/bank-boutique/_site/favicon/favicon.png
+
+================================================================
+3. PUBLIC URL RESOLUTION STRATEGY
+================================================================
+
+3.1 public_url_host
+    The bucket is fronted by the Cloudflare custom domain:
+        https://media-assets2.xyz-labs.xyz/
+    Public access is enabled on the bucket. No signed URLs are
+    required for read.
+
+3.2 resolution_rule
+    Given mediaAsset.r2Key = "<key>", the public URL is:
+        https://media-assets2.xyz-labs.xyz/<key>
+    Written as a template with no trailing-slash ambiguity:
+        publicUrl = `${publicHost}/${r2Key}`
+    where publicHost = "https://media-assets2.xyz-labs.xyz" (no
+    trailing slash) and r2Key never begins with '/'.
+
+3.3 url_vs_r2Key (schema precedence)
+    The mediaAsset oneOf rule already makes this exclusive:
+      - If mediaAsset.url is present, it is consumed verbatim as
+        <img src>. No rewriting, no prefixing.
+      - If mediaAsset.r2Key is present, the resolver computes the
+        public URL via section 3.2 and feeds the resulting absolute
+        URL to <img src>.
+      - A mediaAsset MUST carry exactly one of {url, r2Key}
+        (R-CARD-10 in gallery_schema_rules_v1.txt).
+
+3.4 no_client_rewriting
+    Per code invariant C-FLOW-05, UI code performs no URL rewriting.
+    The resolution in 3.2 MUST happen at dataset-build / publish time
+    (or in a dedicated resolver function consumed synchronously on
+    import) so the value stored in runtime state is a plain string
+    usable directly by <img src>.
+
+3.5 cache_strategy
+    - Cloudflare edge caching applies to all gallery-assets/ objects
+      by default. New keys propagate in seconds.
+    - Keys are immutable (section 5), so a standard immutable cache
+      policy is safe. Replacement uses a new key, not a PUT over an
+      existing one.
+    - For manual purges, the operator flushes the specific public URL
+      via the Cloudflare dashboard; no client-side cache-busting
+      suffix is required in the schema.
+
+3.6 custom_domain_alignment
+    siteConfig.customDomain is unrelated to the asset host. Asset
+    URLs always use media-assets2.xyz-labs.xyz regardless of the
+    storefront's customDomain.
+
+================================================================
+4. MAIN IMAGE AND THUMBNAIL HANDLING
+================================================================
+
+4.1 main_image
+    - cards[].mainImage is the single hero asset referenced by the
+      card. Its mediaRef.role MUST equal "main".
+    - The corresponding entry in cards[].media[] with role="main"
+      (if present) MUST point at the same r2Key (or the same url)
+      as cards[].mainImage.
+    - If cards[].media[] does NOT include a role="main" entry, the
+      mainImage stands alone and is prepended to the displayed
+      carousel before any role="gallery" entries.
+    - Main image is rendered at aspect 32/15 on swipe card, 16/15
+      on expanded profile, 4/3 on recommended-modules strip (UI
+      aspects; no schema constraint, but see R-VAL-03 warnings).
+
+4.2 thumbnail
+    - cards[].thumbnail is OPTIONAL. When absent, the resolver
+      derives a thumbnail URL from the mainImage at render time
+      (no new r2Key written to the dataset).
+    - When present, cards[].thumbnail.role MUST equal "thumbnail",
+      and a media[] entry with role="thumbnail" MAY mirror it.
+    - Recommended canonical thumbnail key:
+        gallery-assets/{siteId}/{cardId}/thumbnail/00-thumb.{ext}
+
+4.3 size_and_format_recommendations (advisory; validators MAY warn)
+      main:       >= 1200 px on the long edge, webp or png
+      gallery:    >= 1200 px on the long edge, webp preferred
+      mobile:     >= 640 px on the long edge, webp preferred
+      thumbnail:  320..640 px square-ish, webp preferred
+      logo:       svg preferred; png fallback with transparent bg
+      favicon:    png 32x32 or 64x64, or ico
+
+4.4 parallelism_mobile_vs_gallery
+    Mobile media entries are parallel-by-orderIndex to gallery
+    entries (R-CARD-11). A mobile entry at orderIndex=N is the
+    mobile variant of the gallery entry at orderIndex=N. If a mobile
+    variant is missing at index N and
+    siteConfig.fallbacks.useDesktopImagesOnMobile=true, the resolver
+    substitutes the desktop gallery entry at that index.
+
+================================================================
+5. REPLACEMENT AND UPDATE BEHAVIOR
+================================================================
+
+5.1 immutability_principle
+    Keys under gallery-assets/ are treated as IMMUTABLE once any
+    dataset referencing them has been published. A "replace" is
+    always a write-then-swap:
+      (a) upload new object under a NEW key,
+      (b) update cards[].media[] / cards[].mainImage to the new key,
+      (c) bump cards[].updatedAt and meta.updatedAt,
+      (d) publish the dataset,
+      (e) only then delete the old key (optional; see 5.4).
+
+5.2 canonical_new_key_on_replace
+    The new key reuses the {siteId}/{cardId}/{role}/ prefix and
+    increments the filename suffix:
+      gallery-assets/{siteId}/{cardId}/{role}/{orderIndex}-{slug}.{ext}
+      ->
+      gallery-assets/{siteId}/{cardId}/{role}/{orderIndex}-{slug}-v2.{ext}
+    Subsequent replacements use -v3, -v4, etc. The version suffix is
+    NOT semantically parsed; it only guarantees key uniqueness.
+
+5.3 reorder_behavior
+    Reordering media changes cards[].media[].orderIndex values but
+    does NOT rename objects. Keys retain their original orderIndex
+    segment; display order is driven by the schema field, not the
+    filename. This preserves cache hits and referential stability.
+
+5.4 delete_policy
+    - Admin "remove image" actions remove the mediaAsset entry from
+      cards[].media[] and (if applicable) clear cards[].mainImage.
+    - The underlying R2 object is NOT automatically deleted; it is
+      orphaned. A periodic garbage-collection sweep MAY delete
+      gallery-assets/ objects with zero references across all
+      published datasets. Live datasets are the source of truth.
+    - Deleting a card (S3 admin contract) does NOT cascade-delete
+      its assets; the same GC sweep handles orphans.
+
+5.5 rename_card_behavior
+    Changing cards[].id is FORBIDDEN once published (C-CARD-01
+    round-trip invariant). Changing cards[].title (which changes the
+    slug) does NOT rewrite existing keys; keys remain under the
+    original {cardId} segment because cardId, not slug, is the key
+    path component.
+
+5.6 multi-site_keys
+    Assets are namespaced by {siteId}. Copying a card across sites
+    requires re-uploading its assets under the target siteId prefix;
+    cross-site referencing by key is not supported.
+
+================================================================
+6. ACCEPTED MEDIA FIELD FORMATS
+================================================================
+
+6.1 mime_to_extension_map (authoritative)
+      image/png      -> png
+      image/jpeg     -> jpg     (accept 'jpeg' on read; normalize to 'jpg')
+      image/webp     -> webp
+      image/avif     -> avif
+      image/gif      -> gif
+      image/svg+xml  -> svg     (site-level logo/favicon only)
+      image/x-icon   -> ico     (favicon only)
+
+6.2 extension_to_mime_map (for auto-derive on upload)
+    The ingest tool MUST derive mediaAsset.mime from the file
+    extension using the inverse of 6.1. If the extension is not in
+    the map, upload is rejected.
+
+6.3 accepted_schema_fields_on_a_media_asset
+    id            required, string, pattern per schema
+    role          required, one of main|gallery|mobile|thumbnail
+    orderIndex    required, integer 0..99
+    url | r2Key   exactly one required (schema oneOf)
+    alt           optional, default "", <= 240 chars
+    width         optional, integer 1..16384 (auto-derived on probe)
+    height        optional, integer 1..16384 (auto-derived on probe)
+    mime          optional at schema level but REQUIRED at publish
+                  time for r2Key-backed entries; derived from ext.
+
+6.4 accepted_schema_fields_on_a_media_ref (mainImage, thumbnail,
+    logo, favicon)
+    role          required, one of main|thumbnail|logo|favicon
+    url | r2Key   exactly one required
+    alt, width, height, mime per 6.3
+
+6.5 size_limits (operational, not schema-enforced)
+    per_object_max:     25 MB
+    per_card_media_sum: 120 MB
+    per_site_media_sum: enforced by Cloudflare bucket quota
+    Dimensions capped at 16384x16384 (schema).
+
+6.6 rejected_formats
+    video/*, audio/*, application/*, and HEIC/HEIF are out of scope
+    for gallery-schema-v1 and MUST be rejected at upload. Future
+    schema versions may extend the enum.
+
+6.7 alt_text_requirement
+    mediaAsset.alt defaults to "" per schema. Publish-time validator
+    SHOULD warn (R-VAL-03) when alt is empty on a role="main" or
+    role="gallery" asset that belongs to a card with status=active.
+
+================================================================
+7. END-TO-END UPLOAD / PUBLISH FLOW (NORMATIVE)
+================================================================
+
+7.1 pick_key
+    Admin tool composes a canonical key per section 2.2 from
+    (siteId, cardId, role, orderIndex, slug, ext). Validator rejects
+    keys that violate section 2.4 constraints.
+
+7.2 upload
+    PUT object to bucket=media-assets2 at the chosen key. Content-
+    Type header set from 6.1. Storage class: Standard.
+
+7.3 probe_dimensions
+    Ingest tool probes width/height and mime, writes them into the
+    mediaAsset record. No dimension data is stored in the R2 object
+    metadata; the schema is the source of truth.
+
+7.4 attach_to_card
+    Admin adds the mediaAsset to cards[].media[] (and/or sets
+    cards[].mainImage / cards[].thumbnail), assigning orderIndex.
+    cards[].updatedAt is bumped.
+
+7.5 publish
+    Dataset publish writes meta.lastPublishedAt and meta.updatedAt.
+    Resolver confirms every r2Key returns 200 at its resolved public
+    URL (section 3.2) before publish completes. A missing object
+    fails the publish.
+
+7.6 swap_on_replace
+    Per section 5, replacement is upload-new-then-swap-ref. Old key
+    is left in place until GC.
+
+================================================================
+8. SCHEMA / RULE CROSS-REFERENCE
+================================================================
+
+- mediaAsset.r2Key maxLength 1024              -> section 2.4
+- mediaAsset oneOf url|r2Key                   -> sections 3.3, 6.3
+- mediaAsset.role enum                         -> sections 2.2, 6.3
+- mediaRef.role enum                           -> sections 2.3, 6.4
+- mime enum                                    -> section 6.1
+- R-CARD-10 exactly one of url|r2Key           -> section 3.3
+- R-CARD-11 role uniqueness for main/thumbnail -> section 4.1, 4.2
+- R-CARD-13 url vs r2Key resolution            -> sections 3.2, 3.4
+- R-SITE-08 mobile fallback behavior           -> section 4.4
+- R-VAL-03 alt-text warning                    -> section 6.7
+- C-FLOW-05 no client-side URL rewriting       -> section 3.4
+
+================================================================
+END
+================================================================

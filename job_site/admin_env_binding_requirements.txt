@@ -1,0 +1,51 @@
+[JOB-GALLERY-ADMIN-FLOW-V1 | WORKER A | S5 | RESULT]
+status: PASS
+
+required_bindings_and_env_for_r2_ready_admin:
+
+worker_bindings (wrangler):
+- R2 bucket binding `MEDIA` -> bucket `media-assets2`
+  - purpose: image object upload/read under `gallery-assets/`.
+- R2 bucket binding `DATASET` -> bucket `media-assets2`
+  - purpose: canonical dataset JSON at `gallery-assets/{siteId}/_dataset/gallery-schema-v1.json`.
+- KV binding `ADMIN_SESSIONS` (optional)
+  - purpose: admin session/token state if auth is enforced server-side.
+
+worker_vars:
+- `SITE_ID=<siteConfig.siteId>`
+- `PUBLIC_ASSET_HOST=https://media-assets2.xyz-labs.xyz`
+- `ENVIRONMENT=dev|staging|prod`
+
+worker_secrets:
+- `ADMIN_AUTH_TOKEN` (required for protected `/admin/api/*`)
+- `PAYME_API_KEY` (optional; only if checkout proxy is enabled)
+
+pages_env_mirroring:
+- `SITE_ID`
+- `PUBLIC_ASSET_HOST`
+- (optional) `VITE_ADMIN_CODE` for client-side `/admin` gate behavior
+
+current_repo_state_vs_requirements:
+- Present today:
+  - `VITE_ADMIN_CODE` usage exists in `/admin` UI.
+  - local save/load path exists via browser localStorage key `artist-connect.admin.dataset.v1`.
+- Not present yet (required for full R2 readiness):
+  - Worker route implementation for `/admin/api/upload` and `/admin/api/save`.
+  - wrangler R2/KV bindings for this admin flow in repo config.
+  - server-side dataset publish + asset resolver using `PUBLIC_ASSET_HOST`.
+
+minimal_next_run_binding_checklist:
+1) Add Worker config with `MEDIA` and `DATASET` bindings.
+2) Set `SITE_ID`, `PUBLIC_ASSET_HOST`, `ENVIRONMENT` in Worker + Pages env.
+3) Set secret `ADMIN_AUTH_TOKEN`.
+4) Implement upload/save admin API routes and point `/admin` submit flow at them.
+5) Verify saved dataset object and uploaded assets exist under `gallery-assets/{siteId}/...`.
+
+references_used:
+- /job_site/r2_asset_conventions_v1.txt
+- /job_site/cloudflare_deploy_planning_v1.txt
+- /job_site/admin_flow_target_file_map.txt
+- /job_site/worker-execution-manual-v1.1 (1).txt (path available in repo mirror)
+
+artifacts:
+- /job_site/admin_env_binding_requirements.txt

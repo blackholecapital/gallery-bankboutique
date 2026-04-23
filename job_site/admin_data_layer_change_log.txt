@@ -16,3 +16,38 @@ artifacts:
 summary:
 - Added schema-shaped admin data utilities for deterministic load/save using localStorage.
 - Implemented required-field and package-limit validation with structured rule-id + json-path issue output.
+
+verification_evidence:
+- repo_path: /workspace/gallery-bankboutique
+- branch: work
+- s2_commit_worker_a: 24121f02f2f3080e78228cb0131169f8759a2297
+- s2_commit_worker_b: f35443550648261fbef760f964a4f2c713d43044
+- integration_head: 632dd908abfdb89db69ce86cc8ae4f4b3f18ed9c (Merge pull request #13)
+- remote_url_expected: https://github.com/blackholecapital/gallery-bankboutique.git (from build-sheet-ADMIN-FLOW-V1 target_repo_url)
+- remote_url_configured_in_this_clone: none
+- push_confirmation:
+  - Evidence of upstream push exists in merge commits present in local history:
+    - 632dd90 Merge pull request #13 from blackholecapital/codex/implement-admin-data-utilities-for-dataset-12-36-43
+    - affa6d4 Merge pull request #12 from blackholecapital/codex/audit-current-admin-route-implementation-04-08-18
+  - Direct remote verification attempt in this environment: `git ls-remote https://github.com/blackholecapital/gallery-bankboutique.git HEAD` -> failed with `CONNECT tunnel failed, response 403`.
+
+s2_function_mapping:
+- schema-backed load/save:
+  - src/admin-flow/storage/adminDatasetStorage.ts
+    - loadAdminDataset(): deterministic fallback path + parse/normalize/validate pipeline.
+    - saveAdminDataset(): normalize + meta stamping + validation gate + stable stringify storage write.
+  - src/admin-flow/schema/adminSchemaValidator.ts
+    - root-key enforcement and schema rule validation used by both load/save.
+  - src/admin-flow/normalizers/adminDatasetNormalizer.ts
+    - schema-shaped normalization/merge to deterministic dataset structure.
+- dataset hydration:
+  - src/admin-flow/constants.ts
+    - fixture import and DEFAULT_ADMIN_DATASET source wiring.
+  - src/admin-flow/fixtures/gallery_schema_example_v1.json
+    - schema fixture payload consumed as initial dataset.
+  - src/admin-flow/storage/adminDatasetStorage.ts
+    - resolveStoredDatasetRaw() uses runtime localStorage key with legacy fallback.
+  - src/admin-flow/hooks/useAdminDataset.ts
+    - hook-level hydration: initial load, reload, and validation/source state.
+  - src/checkout-path/receiveAddress.ts
+    - checkout compatibility read path to hydrate USDC receive address from persisted admin dataset.

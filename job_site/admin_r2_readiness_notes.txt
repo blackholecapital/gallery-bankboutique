@@ -1,0 +1,51 @@
+[JOB-GALLERY-ADMIN-FLOW-V1 | WORKER A | S5 | RESULT]
+status: PASS
+
+goal:
+- Close out current image-field and R2 upload readiness for `/admin` with exact next-run handoff.
+
+what_is_wired_now:
+- `/admin` card editor already writes image-related fields directly into dataset state:
+  - `cards[].mainImage.r2Key` (or url fallback)
+  - `cards[].thumbnail` fields (r2Key/url/alt/width/height)
+  - initial draft media item uses `r2Key` placeholder.
+- Save path is active and schema-gated:
+  - `save(dataset, 'admin-ui-site-section')` -> `saveAdminDataset()` -> localStorage key `artist-connect.admin.dataset.v1`.
+- Validator enforces image reference shape:
+  - media entries require exactly one of `url` or `r2Key` (R-CARD-10).
+  - role/order uniqueness checks are active for media.
+- Runtime renderer compatibility is adapter-based:
+  - `toRenderableAsset(url, r2Key)` resolves `url` directly.
+  - For `r2Key`, current adapter maps to `/${filename}` only (not full R2 host URL).
+  - Active cards from localStorage feed product fixtures.
+
+what_is_placeholder_or_adapter_based:
+- No actual file upload flow exists in `/admin` yet (no file input, no presigned upload, no Worker API call).
+- No Worker-backed dataset publish to R2 path yet; save is browser-local only.
+- `r2Key -> public URL` resolution is not using canonical host resolver yet; current filename adapter is temporary compatibility logic.
+- No pre-publish HEAD/404 verification for referenced `r2Key` assets.
+
+r2_handoff_for_next_run (admin image fields -> R2-compatible storage):
+1) Add `/admin/api/upload` Worker endpoint.
+   - Input: file + `siteId`, `cardId`, `role`, `orderIndex`, `slug`.
+   - Server mints canonical key:
+     `gallery-assets/{siteId}/{cardId}/{role}/{orderIndex}-{slug}.{ext}`
+   - Worker PUTs to R2 bucket binding (`MEDIA`) and returns `{ r2Key, mime, width, height }`.
+2) In `/admin`, replace manual image text entry with upload-assisted field update.
+   - On success, write returned `r2Key` into `mainImage` / `thumbnail` / `media[]` record.
+   - Keep `url` empty when `r2Key` is used (schema oneOf rule).
+3) Add `/admin/api/save` Worker endpoint.
+   - Validate dataset server-side.
+   - Persist canonical JSON to:
+     `gallery-assets/{siteId}/_dataset/gallery-schema-v1.json` via `DATASET` binding.
+4) Replace renderer adapter fallback.
+   - Resolve `r2Key` as `${PUBLIC_ASSET_HOST}/${r2Key}` (no filename-only mapping).
+   - Preserve `url` precedence when present.
+5) Enforce immutable replace semantics.
+   - New upload on replacement uses new key suffix (`-v2`, `-v3`, ...), then dataset swap.
+
+scope_notes:
+- This closeout documents readiness and handoff only; no new upload or Worker implementation was added in this run.
+
+artifacts:
+- /job_site/admin_r2_readiness_notes.txt

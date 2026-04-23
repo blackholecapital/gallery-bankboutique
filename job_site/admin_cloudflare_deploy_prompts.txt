@@ -1,0 +1,68 @@
+[JOB-GALLERY-ADMIN-FLOW-V1 | WORKER B | S5 | RESULT]
+status: PASS
+
+required_references:
+- /job_site/cloudflare_deploy_planning_v1.txt
+- /job_site/operator_test_prompts_v1.txt
+- /job_site/admin_flow_verification_pack.txt
+- /mnt/data/gallery-bankboutique-main (1).zip (not present in runtime; used repo mirror path)
+- /mnt/data/worker-execution-manual-v1.1.txt (not present in runtime; used repo mirror manual)
+
+deployment_prompts:
+
+D-01 Pages project bootstrap
+- Action: Create Cloudflare Pages project `gallery-<siteId>`.
+- Set build command: `npm ci && npm run build`.
+- Set output directory: `dist`.
+- Expected: preview deploy succeeds and serves SPA shell.
+
+D-02 Worker/API bootstrap
+- Action: Create Worker `gallery-<siteId>-api` with entry `src/worker/index.ts`.
+- Route expectations:
+  - `<customDomain>/admin/api/*`
+  - `<customDomain>/checkout/*`
+- Expected: `/admin/api/*` and `/checkout/*` are resolved by Worker, all other routes by Pages.
+
+D-03 Required bindings and env
+- Action: Configure Worker bindings/vars/secrets:
+  - R2: `MEDIA` -> `media-assets2`
+  - R2: `DATASET` -> `media-assets2`
+  - KV (optional): `ADMIN_SESSIONS`
+  - Vars: `SITE_ID`, `PUBLIC_ASSET_HOST=https://media-assets2.xyz-labs.xyz`, `ENVIRONMENT`
+  - Secrets: `ADMIN_AUTH_TOKEN`, optional `PAYME_API_KEY`
+- Expected: Worker can read/write dataset and media using canonical prefixes.
+
+D-04 Dataset seed prompt
+- Action: Upload canonical dataset object to:
+  `gallery-assets/{siteId}/_dataset/gallery-schema-v1.json`.
+- Expected: object exists, schemaVersion is `gallery-schema-v1`, environment is correct.
+
+D-05 Asset seed prompt
+- Action: Upload site/card assets to `gallery-assets/{siteId}/...` prefixes per conventions.
+- Expected: R2 objects are public-readable at `https://media-assets2.xyz-labs.xyz/{r2Key}`.
+
+D-06 Pages/Worker wiring check
+- Action: Open deployed URLs and confirm:
+  - GET `/` -> Pages storefront
+  - GET `/admin` -> admin UI shell
+  - Authenticated POST `/admin/api/save` -> Worker path
+- Expected: split routing works exactly as configured.
+
+D-07 Admin access-control prompt
+- Action: Apply Cloudflare Access rule for `<customDomain>/admin*`.
+- Expected: unauthenticated `/admin` blocked; authenticated operator proceeds.
+
+D-08 Publish integrity prompt
+- Action: Run pre-publish resolver check: each referenced `r2Key` returns 200.
+- Expected: publish blocked on any missing object; pass only when all resolve.
+
+D-09 Custom-domain prompt
+- Action: Bind `siteConfig.customDomain` in Pages and keep Worker routes on same host.
+- Expected: HTTPS valid, storefront + admin routes work on custom domain.
+
+D-10 Post-deploy prompt
+- Action: stamp deployment reference in dataset meta and re-verify `/admin` save/load.
+- Expected: deployment id persisted; no regression in admin behavior.
+
+artifacts:
+- /job_site/admin_cloudflare_deploy_prompts.txt

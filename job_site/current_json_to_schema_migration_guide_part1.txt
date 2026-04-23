@@ -1,0 +1,137 @@
+[JOB-GALLERY-SCHEMA-V1 | WORKER A | S4 | ARTIFACT]
+artifact: /job_site/current_json_to_schema_migration_guide_part1.txt
+part: 1 of N (field transformation mapping only)
+source_current: /job_site/product_source_of_truth (1).json
+target_schema: /job_site/gallery_schema_spec_v1.json
+scope: Mapping-only list. No explanations, deprecations, or fallbacks.
+
+================================================================
+1. ROOT TRANSFORMATION
+================================================================
+
+products[]                              -> cards[]
+
+================================================================
+2. PER-PRODUCT FIELD MAPPING (current -> target)
+================================================================
+
+products[].name                         -> cards[].title
+products[].productNumber                -> cards[].sku
+products[].productNumber                -> cards[].id                 (derived: slug or UUID)
+products[].oneLinePromise               -> cards[].tagline
+products[].showroomDescription          -> cards[].description        (fold when == oneLinePromise)
+products[].buyerOutcome                 -> cards[].outcome
+products[].actionPath                   -> cards[].cta.internalPath
+products[].demoUrl                      -> cards[].cta.externalUrl
+products[].orderedImages[0]             -> cards[].mainImage          (mediaRef, role="main")
+products[].orderedImages[1..n]          -> cards[].media[]            (role="gallery", orderIndex preserved)
+products[].orderedImagesMobile[]        -> cards[].media[]            (role="mobile", orderIndex preserved)
+products[].bullets                      -> cards[].bullets
+products[].pricing.setup                -> cards[].pricing.setup
+products[].pricing.monthly              -> cards[].pricing.monthly
+
+================================================================
+3. TARGET FIELDS WITHOUT CURRENT SOURCE (NEW)
+================================================================
+
+3.1 siteConfig (entire object NEW)
+    siteConfig.siteId
+    siteConfig.siteName
+    siteConfig.brandName
+    siteConfig.heroTitle
+    siteConfig.heroSubtitle
+    siteConfig.tagline
+    siteConfig.layoutMode
+    siteConfig.active
+    siteConfig.packageTier
+    siteConfig.packageCardLimit
+    siteConfig.defaultCurrency
+    siteConfig.locale
+    siteConfig.timezone
+    siteConfig.customDomain
+    siteConfig.contactEmail
+    siteConfig.logo
+    siteConfig.favicon
+    siteConfig.theme.mode
+    siteConfig.theme.primaryColor
+    siteConfig.theme.accentColor
+    siteConfig.theme.background
+    siteConfig.theme.foreground
+    siteConfig.theme.surface
+    siteConfig.theme.border
+    siteConfig.fallbacks.useDesktopImagesOnMobile
+
+3.2 cards[] admin/ops fields (NEW)
+    cards[].id                          (derived)
+    cards[].thumbnail
+    cards[].tags
+    cards[].badges
+    cards[].promoCode
+    cards[].promoDiscountPercent
+    cards[].status
+    cards[].active
+    cards[].orderIndex
+    cards[].liveDemoUrl
+    cards[].videoDemoUrl
+    cards[].createdAt
+    cards[].updatedAt
+    cards[].cta.kind
+    cards[].cta.label
+    cards[].mainImage.role              ("main")
+    cards[].mainImage.url | r2Key
+    cards[].mainImage.alt
+    cards[].mainImage.width
+    cards[].mainImage.height
+    cards[].mainImage.mime
+    cards[].media[].id
+    cards[].media[].role
+    cards[].media[].orderIndex
+    cards[].media[].url | r2Key
+    cards[].media[].alt
+    cards[].media[].width
+    cards[].media[].height
+    cards[].media[].mime
+    cards[].pricing.currency
+    cards[].pricing.interval
+    cards[].pricing.intervalLabel
+    cards[].pricing.price               (legacy passthrough)
+    cards[].pricing.trial
+    cards[].pricing.taxInclusive
+
+3.3 commerceConfig (entire object NEW)
+    commerceConfig.provider
+    commerceConfig.mode
+    commerceConfig.currency
+    commerceConfig.publishableKey
+    commerceConfig.checkoutCreateUrl
+    commerceConfig.checkoutStatusUrl
+    commerceConfig.successUrlTemplate
+    commerceConfig.cancelUrlTemplate
+    commerceConfig.sourceApp
+    commerceConfig.checkoutMode
+    commerceConfig.paymentMethods
+    commerceConfig.couponsEnabled
+    commerceConfig.subscriptionsEnabled
+    commerceConfig.taxMode
+    commerceConfig.webhookRef
+    commerceConfig.promos.launchParty
+    commerceConfig.promos.usdc
+    commerceConfig.usdc.receiveAddress
+    commerceConfig.usdc.contract
+    commerceConfig.usdc.decimals
+    commerceConfig.usdc.chainId
+
+3.4 meta (entire object NEW)
+    meta.schemaVersion
+    meta.generatedAt
+    meta.updatedAt
+    meta.lastPublishedAt
+    meta.updatedBy
+    meta.source
+    meta.environment
+    meta.deploymentRef
+    meta.notes
+
+================================================================
+END PART 1
+================================================================

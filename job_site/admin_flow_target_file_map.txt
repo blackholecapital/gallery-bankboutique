@@ -1,0 +1,113 @@
+[JOB-GALLERY-ADMIN-FLOW-V1 | WORKER A | S1 | RESULT]
+status: PASS
+
+implementation_note:
+- Scope: identify which files must be replaced, extended, or added to support the schema-backed one-page admin flow defined by `admin_contract_v1` and `gallery_schema_spec_v1`.
+- Principle: smallest safe change, preserve existing router shell, isolate admin data layer from renderer.
+
+A) FILES TO REPLACE (direct behavior replacement)
+1) src/pages/admin/AdminPage.tsx
+   action: REPLACE
+   reason:
+   - Current page is payout-only/localStorage-only.
+   - Must become one-page schema editor (site section + card section + commerce basics + save/load feedback) per contract Section A/B.
+
+B) FILES TO EXTEND (retain file, add schema-backed responsibilities)
+1) src/routes/routeMap.tsx
+   action: EXTEND
+   reason:
+   - Keep `/admin` route but wire to upgraded page and (if implemented in S2/S3) optional admin data providers/error boundaries.
+
+2) src/checkout-path/receiveAddress.ts
+   action: EXTEND (compatibility adapter)
+   reason:
+   - Preserve current checkout behavior while allowing fallback order to prefer schema-backed `commerceConfig.usdc.receiveAddress` once admin data layer exists.
+   - Keep localStorage override behavior only if still required by compatibility rules.
+
+3) src/components/layout/AppLayout.tsx (optional minimal)
+   action: EXTEND (optional)
+   reason:
+   - If `/admin` needs layout variance (e.g., hide bottom nav for dense editing), gate by pathname with minimal shell change.
+
+4) src/components/composites/BottomNav.tsx (optional minimal)
+   action: EXTEND (optional)
+   reason:
+   - Decide whether to expose admin entry in-nav for operator UX; if not needed, keep unchanged.
+
+C) FILES TO ADD (new schema-backed admin layer)
+1) src/admin-flow/types.ts
+   purpose:
+   - Local TS types for `siteConfig/cards/commerceConfig/meta` editor state + error model.
+
+2) src/admin-flow/storage/adminDatasetStorage.ts
+   purpose:
+   - Canonical load/save adapter for admin dataset persistence path used in this app.
+
+3) src/admin-flow/schema/adminSchemaValidator.ts
+   purpose:
+   - Validate against schema rules + contract cross-field rules.
+   - Return rule-id + JSON-path error objects.
+
+4) src/admin-flow/normalizers/adminDatasetNormalizer.ts
+   purpose:
+   - Normalize loaded data into UI-safe shape and defaults before editing.
+
+5) src/admin-flow/rules/packageLimit.ts
+   purpose:
+   - Explicit package-card-limit checks (activation and limit reduction guards).
+
+6) src/admin-flow/rules/cardLifecycle.ts
+   purpose:
+   - Card create/update/deactivate/delete helper rules matching contract constraints.
+
+7) src/admin-flow/hooks/useAdminDataset.ts
+   purpose:
+   - Page-facing load/edit/save/publish orchestration hook.
+
+8) src/admin-flow/components/SiteConfigSection.tsx
+   purpose:
+   - Site-level fields editor (A.1).
+
+9) src/admin-flow/components/CardManagementSection.tsx
+   purpose:
+   - Card list/editor/create/deactivate/delete flows (A.2/B.1-B.4).
+
+10) src/admin-flow/components/CommerceConfigSection.tsx
+    purpose:
+    - Commerce + promo + USDC fields editor (A.3).
+
+11) src/admin-flow/components/MetaSection.tsx
+    purpose:
+    - Read-only + editable meta rendering per A.4.
+
+12) src/admin-flow/components/AdminSaveBar.tsx
+    purpose:
+    - Save/publish actions + validation summaries.
+
+13) src/admin-flow/constants.ts
+    purpose:
+    - Shared limits/defaults used by admin rules and UI.
+
+D) FILES TO KEEP UNCHANGED FOR S1 (documented handoff)
+- src/routes/paths.ts (already correct path contract: `/admin`)
+- src/app/router/createAppRouter.tsx
+- src/app/router/AppRouter.tsx
+- src/app/providers/AppProviders.tsx
+- src/main.tsx
+
+E) STAGE HANDOFF NOTES FOR DOWNSTREAM WORKERS
+- S2 (data layer) should implement items C1-C7 first with deterministic load/save + validation.
+- S3 (UI) should implement C8-C12 and replace `AdminPage.tsx` to consume S2 APIs.
+- S4 (renderer binding) should patch compatibility so gallery/checkout consume schema-backed dataset without shell redesign.
+
+verification:
+- Mapped current route/page file ownership from live repo.
+- Mapped required target capabilities from contract/spec to concrete replace/extend/add file actions.
+
+
+execution_update:
+- Repo push re-attempted with configured origin remote.
+- Push remains blocked by environment transport restriction (HTTP CONNECT 403), not by repo state.
+- Artifact paths reconfirmed unchanged:
+  - /job_site/admin_flow_current_state_audit.txt
+  - /job_site/admin_flow_target_file_map.txt

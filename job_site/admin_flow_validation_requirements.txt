@@ -1,0 +1,67 @@
+[JOB-GALLERY-ADMIN-FLOW-V1 | WORKER B | S1 | RESULT]
+status: PASS
+
+scope:
+- Minimum validation requirements the admin must enforce for schema load/save/publish and renderer compatibility.
+
+1) LOAD VALIDATION (blocking)
+- Enforce root shape and top-level key exclusivity (`R-ROOT-01`, `C-LOAD-02`).
+- Enforce JSON schema validation against `gallery_schema_spec_v1.json` before edit session (`C-LOAD-01`).
+- Reject malformed/unknown card/media/commerce/meta structures.
+
+2) LOAD WARNINGS (non-blocking)
+- Surface schema warning set (`R-VAL-03`, `C-LOAD-04`):
+  - missing optional media width/height/mime
+  - missing mobile media when mobile fallback disabled
+  - missing thumbnail on active card
+
+3) SAVE VALIDATION (blocking)
+- Save must pass full schema + cross-field rule checks (`C-SAVE-01`, `R-VAL-01`).
+- Required cross-field set to enforce at minimum:
+  - uniqueness: cards.id (`R-CARD-04`), cards.sku (`R-CARD-05`), slug(title) (`R-CARD-06`)
+  - media constraints: role cardinality + orderIndex uniqueness + url/r2Key rule (`R-CARD-10`,`R-CARD-11`,`R-CARD-12`)
+  - CTA branch requirement (`R-CARD-14`)
+  - promo co-requirement (`R-CARD-19`)
+  - active mirror consistency with status (`R-CARD-21`)
+  - package limit checks (`R-LIMIT-02`,`R-LIMIT-06`)
+
+4) CARD LIFECYCLE VALIDATION (blocking)
+- Create:
+  - bullets count 3..8 (`C-CREATE-04`)
+  - mainImage required + media min 1 (`C-CREATE-05`)
+  - default status draft/active mirror false unless explicitly activated with limit pass (`C-CREATE-07`)
+  - orderIndex unique range and createdAt/updatedAt stamping (`C-CREATE-08`,`C-CREATE-09`)
+- Update:
+  - immutable id + createdAt (`C-UPDATE-01`)
+  - activation transitions enforce limit gate (`C-UPDATE-03`,`C-LIMIT-02`)
+  - set cards[i].updatedAt + meta.updatedAt on mutation (`C-UPDATE-06`)
+- Deactivate/delete:
+  - deactivation preserves record and frees active slot (`C-DEACT-01`)
+  - delete requires explicit confirm path (`C-DEACT-04`)
+
+5) PACKAGE LIMIT VALIDATION (blocking)
+- On save/publish, active-card count must be `<= siteConfig.packageCardLimit` (`C-LIMIT-01`).
+- Reject activating when at limit (`C-LIMIT-02`).
+- Reject lowering limit below current active count (`C-LIMIT-03`).
+
+6) METADATA + TIMESTAMP VALIDATION
+- Save stamps:
+  - `meta.updatedAt = now`
+  - `meta.source = "admin"`
+  - `meta.updatedBy = authenticated admin id`
+  (`C-SAVE-02`,`C-SAVE-03`)
+- Keep `meta.schemaVersion` fixed (`C-SAVE-04`, `R-META-02`).
+- Publish additionally stamps `meta.lastPublishedAt` (`C-PUB-02`).
+
+7) ERROR REPORTING CONTRACT
+- Validation failures must include rule id and JSON path (`C-SAVE-05`, `R-VAL-02`).
+- No partial writes on failed validation.
+
+8) RENDERER COMPATIBILITY GATE (pre-write or pre-publish guard)
+- Ensure each active card contains fields required by current renderer/checkout adapter path:
+  title/tagline/outcome/bullets/pricing/main media.
+- Ensure adapter can generate stable slug/product identity and checkout line item IDs.
+- If compatibility adapter cannot map required runtime fields, block publish and return structured error.
+
+verification_basis:
+- Requirements derived from `admin_contract_v1`, `gallery_schema_rules_v1`, `gallery_schema_spec_v1`, and current renderer/checkout source dependencies.

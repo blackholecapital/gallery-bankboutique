@@ -1,0 +1,181 @@
+UI FIELD DEPENDENCY NOTES
+job_id: JOB-GALLERY-SCHEMA-V1
+worker: WORKER B
+stage: S1
+source: gallery-bankboutique-main (repo at /home/user/gallery-bankboutique)
+scope: field needs only; no redesign, no new fields proposed.
+
+================================================================
+DOMAIN: cards  (per-card field needs)
+================================================================
+Canonical source of the shape consumed by every UI surface today:
+  src/product-intake-model/Product.ts:6-23  (Product type)
+
+Required fields actually read by UI:
+  id                       string   SKU; used as line-item prefix in checkout
+                                    (CartCheckoutBoundary.tsx:141, :149) and
+                                    for estimate validation (estimateState.ts:37).
+  name                     string   Tab label, card title, checkout line-item
+                                    name (CartCheckoutBoundary.tsx:142, :150);
+                                    also used to generate slug route id via
+                                    slugifyProductName (Product.ts:250-251).
+  oneLinePromise           string   Tagline on swipe card and expanded view
+                                    (InitialSwipeProductCard.tsx, ExpandedProfileCard.tsx).
+  buyerOutcome             string   Outcome statement on expanded view
+                                    (ExpandedProfileCard.tsx).
+  actionPath               string   Route URL for detail page; used by
+                                    swipe card action button.
+  orderedImages            string[] Hero + carousel images. Min length 1 for
+                                    card to render hero
+                                    (InitialSwipeProductCard.tsx:75 aspect 32/15;
+                                     ExpandedProfileCard.tsx:86 aspect 16/15;
+                                     RecommendedModulesStrip.tsx:31 aspect 4/3).
+  bullets                  string[] Feature bullets. TS type enforces >=3
+                                    (Product.ts:14 tuple of 3+). Rendered on
+                                    swipe card and expanded view.
+  setupPrice               number   USD DOLLARS (not cents). Summed for setup
+                                    subtotal and line-item unit_amount
+                                    (CartCheckoutBoundary.tsx:45, :135).
+  monthlyPrice             number   USD DOLLARS. Summed for monthly recurring
+                                    (CartCheckoutBoundary.tsx:46, :136).
+  price                    number   Legacy field. Present on every fixture but
+                                    not read by any UI surface. Kept for
+                                    back-compat; schema must accept it.
+
+Optional fields actually read by UI:
+  orderedMobileImages      (string|null)[]   Parallels orderedImages by index;
+                                             when present, substituted in mobile
+                                             lightbox views.
+  monthlyLabel             string            Suffix for monthly price display;
+                                             defaults to 'mo'.
+  liveDemoUrl              string            Clickable demo link on expanded
+                                             view.
+  videoDemoUrl             string | null     Video demo indicator on expanded
+                                             view.
+  promoCode                string            Per-card promo code.
+  promoDiscountPercent     number            Percent off setupPrice when the
+                                             matching promoCode is applied and
+                                             every card in cart carries the
+                                             same promoCode
+                                             (CartCheckoutBoundary.tsx:29-35).
+
+Derived-from-card identifiers used across app:
+  slug = name.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'')
+    (Product.ts:250-251). Slug is the route id persisted in the estimate
+    (estimateState.ts:72) and resolved back to a product via getProductById
+    which matches on BOTH slug and raw id (Product.ts getProductById).
+    Implication: name must produce a stable, unique slug per card.
+
+================================================================
+DOMAIN: siteConfig  (site-level field needs)
+================================================================
+No admin-editable siteConfig exists today. Fields read at runtime that
+siteConfig must cover to avoid hardcoding regressions:
+
+  brandName                string     Hardcoded as "Factory Product Gallery"
+                                      (HomePage.tsx:22).
+  currency                 string     Hardcoded 'usd'
+                                      (CartCheckoutBoundary.tsx:165;
+                                       PayMeCheckoutCard.tsx formatCurrency).
+  themeMode (default)      'light'|'dark'   Persisted via localStorage key
+                                      'artist-connect.theme.mode'
+                                      (ThemeProvider.tsx:11).
+  themeTokens              object     Static CSS tokens in
+                                      src/styles/tokens/colors.css
+                                      (primary, foreground, surface, borders,
+                                       light + dark variants).
+  estimateStorageKey       string     'artist-connect.estimate.v1'
+                                      (estimateState.ts:3). Must remain stable
+                                      if schema drives rehydration.
+
+================================================================
+DOMAIN: commerceConfig  (checkout/payment field needs)
+================================================================
+Touchpoints: src/checkout-path/*, src/pages/checkout/CheckoutConfirmPage.tsx
+
+Payment methods wired in UI (PayMeCheckoutCard.tsx):
+  'card' | 'apple_pay' | 'google_pay' | 'usdc'
+
+Endpoints read by code:
+  checkoutCreateUrl        Hardcoded 'https://api.xyz-labs.xyz/checkout/create'
+                           (CartCheckoutBoundary.tsx:8 uses CHECKOUT_API_BASE
+                            + '/checkout/create'). Note: paymeConfig.ts exports
+                            PAYME_WORKER_URL from VITE_PAYME_WORKER_URL but the
+                            cart boundary does NOT read it. Schema must expose
+                            this URL so the hardcode can be removed.
+  checkoutStatusUrl        Hardcoded 'https://api.xyz-labs.xyz/checkout/status'
+                           (CheckoutConfirmPage.tsx:5).
+  sourceApp                VITE_PAYME_SOURCE_APP || 'gallery'
+                           (paymeConfig.ts:5-6; sent as metadata.source_app,
+                            CartCheckoutBoundary.tsx:170).
+
+Checkout request body shape (must be derivable from schema):
+  checkout_id     uuid generated client-side (CartCheckoutBoundary.tsx:124-127)
+  mode            'subscription' (line 164)
+  currency        'usd' (line 165)
+  success_url     `${origin}/checkout/confirm` (line 166)
+  cancel_url      `${origin}/cart` (line 167)
+  metadata        { source_origin, source_app, promo_code }
+  line_items[]    per card, up to 2 entries:
+                    { product_id: `${id}_setup`,   name:`${name} (Setup)`,
+                      quantity:1, unit_amount: setupCents }
+                    { product_id: `${id}_monthly`, name:`${name} (Monthly)`,
+                      quantity:1, unit_amount: monthlyCents,
+                      recurring:{ interval:'month' } }
+                  Zero-value legs are skipped (lines 139-140, 147).
+                  setupCents applies a discountRatio so promo discount is
+                  proportionally attributed to each setup line (line 132-135).
+
+Promo rules enforced in code (Product.ts:25-28, CartCheckoutBoundary.tsx:18-38):
+  GLOBAL_PROMOS.launchParty = { code:'LAUNCH30', percentOff:30, label:... }
+  GLOBAL_PROMOS.usdc        = { code:'USDC',     percentOff:10, label:... }
+  Per-card promo valid only when every card in cart shares the same
+  promoCode (line 33). USDC stacks 10% on top of the already-discounted
+  total when method === 'usdc' (line 59-60).
+
+USDC payment config (checkout-path/receiveAddress.ts):
+  DEFAULT_USDC_RECEIVE_ADDRESS   0x3a71f0695DACde00CcECc622556F711E2bD50A0
+  USDC_BASE_CONTRACT             0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913
+  USDC_DECIMALS                  6
+  chainId                        8453 (BASE mainnet)
+  override                       localStorage key 'payme_usdc_address'
+                                 (USDC_STORAGE_KEY); set by /admin.
+
+================================================================
+DOMAIN: meta  (dataset-level field needs)
+================================================================
+No existing meta surface in code. Nothing in the UI reads version,
+updatedAt, or count. Schema may introduce these but UI does not require
+any meta field today. Only persistent versioned identifier in code is the
+estimate storage key suffix 'v1' (estimateState.ts:3), which is independent
+of the product dataset.
+
+================================================================
+ADMIN TOUCHPOINTS  (src/pages/admin/AdminPage.tsx)
+================================================================
+Current /admin surface edits exactly ONE field:
+  USDC receive address  (commerceConfig.usdc.receiveAddress)
+    - Persisted to window.localStorage under key USDC_STORAGE_KEY
+      ('payme_usdc_address'). AdminPage.tsx:23.
+    - Revertable to DEFAULT_USDC_RECEIVE_ADDRESS via Clear
+      (AdminPage.tsx:28-34).
+    - Gated by env VITE_ADMIN_CODE; no gate when env is unset
+      (AdminPage.tsx:10, 17).
+
+No card CRUD, no siteConfig editing, no package-limit enforcement, and
+no save/load of product data is implemented today. Schema must leave
+room for these but UI imposes no field dependency beyond the USDC address.
+
+================================================================
+DATA SOURCE TODAY
+================================================================
+Products: static array productFixtures exported from
+  src/product-intake-model/Product.ts:30-242. No fetch, no remote
+  source, no active/inactive flag, no stock field.
+Estimate/cart: localStorage 'artist-connect.estimate.v1'
+  (estimateState.ts). Persists only { productId (slug), addedAt } tuples;
+  product data is rehydrated from fixtures by id/slug lookup.
+Image URLs: root-relative paths served from /public (e.g. '/Studio1.png').
+  No R2, CDN, or transform layer referenced in source code.
+
+END

@@ -1,0 +1,23 @@
+[JOB-GALLERY-ADMIN-FLOW-V1 | WORKER B | S3 | RESULT]
+status: PASS
+
+scope:
+- Implemented bounded one-page card-management section in /admin.
+
+repo_changes:
+- src/pages/admin/AdminPage.tsx
+
+implemented_card_section:
+- Card selector list sorted by orderIndex.
+- Create draft card action with schema-compatible defaults.
+- Editable fields: title, sku, price (setup/price mirror), short description (tagline), full description, main image field, thumbnail fields 1..5, active toggle, and sort order.
+- Package-limit-aware activation via canActivateCard() with inline rule feedback.
+- Deactivate behavior via active toggle -> status inactive (preserves record).
+
+save_load_wiring:
+- Uses useAdminDataset() for load state.
+- Uses save(dataset, 'admin-ui-site-section') for schema-backed persistence.
+- Validation errors surfaced inline from data-layer validation result.
+
+handoff_notes:
+- Delete flow and advanced media/card lifecycle UX are not part of this bounded S3 scope.

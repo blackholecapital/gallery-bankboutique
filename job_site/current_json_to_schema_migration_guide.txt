@@ -1,0 +1,379 @@
+[JOB-GALLERY-SCHEMA-V1 | WORKER A | S4 | ARTIFACT]
+artifact: /job_site/current_json_to_schema_migration_guide.txt
+source_current: /job_site/product_source_of_truth (1).json
+target_schema: /job_site/gallery_schema_spec_v1.json
+rules: /job_site/gallery_schema_rules_v1.txt
+map: /job_site/current_to_target_field_map.txt
+scope: Consolidated migration guide. Field transformations, deprecated
+       fields, fallback rules, unresolved placeholders for manual admin
+       completion. Supersedes split parts 1 and 2.
+
+================================================================
+SECTION A. FIELD TRANSFORMATION MAPPING
+================================================================
+
+A.1 ROOT TRANSFORMATION
+    products[]                              -> cards[]
+
+A.2 PER-PRODUCT FIELD MAPPING (current -> target)
+    products[].name                         -> cards[].title
+    products[].productNumber                -> cards[].sku
+    products[].productNumber                -> cards[].id                 (derived: slug or UUID)
+    products[].oneLinePromise               -> cards[].tagline
+    products[].showroomDescription          -> cards[].description        (fold when == oneLinePromise)
+    products[].buyerOutcome                 -> cards[].outcome
+    products[].actionPath                   -> cards[].cta.internalPath
+    products[].demoUrl                      -> cards[].cta.externalUrl
+    products[].orderedImages[0]             -> cards[].mainImage          (mediaRef, role="main")
+    products[].orderedImages[1..n]          -> cards[].media[]            (role="gallery", orderIndex preserved)
+    products[].orderedImagesMobile[]        -> cards[].media[]            (role="mobile", orderIndex preserved)
+    products[].bullets                      -> cards[].bullets
+    products[].pricing.setup                -> cards[].pricing.setup
+    products[].pricing.monthly              -> cards[].pricing.monthly
+
+A.3 TARGET FIELDS WITHOUT CURRENT SOURCE (NEW)
+
+A.3.1 siteConfig (entire object NEW)
+    siteConfig.siteId
+    siteConfig.siteName
+    siteConfig.brandName
+    siteConfig.heroTitle
+    siteConfig.heroSubtitle
+    siteConfig.tagline
+    siteConfig.layoutMode
+    siteConfig.active
+    siteConfig.packageTier
+    siteConfig.packageCardLimit
+    siteConfig.defaultCurrency
+    siteConfig.locale
+    siteConfig.timezone
+    siteConfig.customDomain
+    siteConfig.contactEmail
+    siteConfig.logo
+    siteConfig.favicon
+    siteConfig.theme.mode
+    siteConfig.theme.primaryColor
+    siteConfig.theme.accentColor
+    siteConfig.theme.background
+    siteConfig.theme.foreground
+    siteConfig.theme.surface
+    siteConfig.theme.border
+    siteConfig.fallbacks.useDesktopImagesOnMobile
+
+A.3.2 cards[] admin/ops fields (NEW)
+    cards[].id                          (derived)
+    cards[].thumbnail
+    cards[].tags
+    cards[].badges
+    cards[].promoCode
+    cards[].promoDiscountPercent
+    cards[].status
+    cards[].active
+    cards[].orderIndex
+    cards[].liveDemoUrl
+    cards[].videoDemoUrl
+    cards[].createdAt
+    cards[].updatedAt
+    cards[].cta.kind
+    cards[].cta.label
+    cards[].mainImage.role              ("main")
+    cards[].mainImage.url | r2Key
+    cards[].mainImage.alt
+    cards[].mainImage.width
+    cards[].mainImage.height
+    cards[].mainImage.mime
+    cards[].media[].id
+    cards[].media[].role
+    cards[].media[].orderIndex
+    cards[].media[].url | r2Key
+    cards[].media[].alt
+    cards[].media[].width
+    cards[].media[].height
+    cards[].media[].mime
+    cards[].pricing.currency
+    cards[].pricing.interval
+    cards[].pricing.intervalLabel
+    cards[].pricing.price               (legacy passthrough)
+    cards[].pricing.trial
+    cards[].pricing.taxInclusive
+
+A.3.3 commerceConfig (entire object NEW)
+    commerceConfig.provider
+    commerceConfig.mode
+    commerceConfig.currency
+    commerceConfig.publishableKey
+    commerceConfig.checkoutCreateUrl
+    commerceConfig.checkoutStatusUrl
+    commerceConfig.successUrlTemplate
+    commerceConfig.cancelUrlTemplate
+    commerceConfig.sourceApp
+    commerceConfig.checkoutMode
+    commerceConfig.paymentMethods
+    commerceConfig.couponsEnabled
+    commerceConfig.subscriptionsEnabled
+    commerceConfig.taxMode
+    commerceConfig.webhookRef
+    commerceConfig.promos.launchParty
+    commerceConfig.promos.usdc
+    commerceConfig.usdc.receiveAddress
+    commerceConfig.usdc.contract
+    commerceConfig.usdc.decimals
+    commerceConfig.usdc.chainId
+
+A.3.4 meta (entire object NEW)
+    meta.schemaVersion
+    meta.generatedAt
+    meta.updatedAt
+    meta.lastPublishedAt
+    meta.updatedBy
+    meta.source
+    meta.environment
+    meta.deploymentRef
+    meta.notes
+
+================================================================
+SECTION B. DEPRECATED / FOLDED / DROPPED CURRENT FIELDS
+================================================================
+
+B.1 products[].showroomDescription
+    disposition: FOLD into cards[].description.
+    rule: When showroomDescription == oneLinePromise (true for 8 of 9
+          current records), DROP showroomDescription and leave
+          cards[].description unset so UI falls back to tagline.
+          When distinct (Studio case), retain showroomDescription as
+          cards[].description; tagline still carries oneLinePromise.
+
+B.2 products[].orderedImages (as a flat string[])
+    disposition: DEPRECATED shape. Replaced by structured
+                 cards[].mainImage + cards[].media[] entries.
+    post-migration: the bare array form MUST NOT appear in the new
+                    dataset (R-CARD-08).
+
+B.3 products[].orderedImagesMobile (as a flat string[])
+    disposition: DEPRECATED shape. Replaced by cards[].media[]
+                 entries with role="mobile".
+
+B.4 Implicit array-index ordering on products[]
+    disposition: DEPRECATED. Ordering is now driven by explicit
+                 cards[].orderIndex (R-CARD-01, R-CARD-22).
+
+B.5 No other current field is dropped. All remaining current fields
+    have deterministic mapped targets (see Section A.2).
+
+================================================================
+SECTION C. FALLBACK RULES APPLIED DURING MIGRATION
+================================================================
+
+C.1 Description fallback
+    If showroomDescription == oneLinePromise, emit cards[].description
+    as absent. Consumers fall back to cards[].tagline per schema
+    description on cards[].description.
+
+C.2 CTA kind selection (cards[].cta.kind)
+    - When products[].demoUrl is present AND is the intended primary
+      action: cta.kind = "external", cta.externalUrl = demoUrl.
+      cta.internalPath MAY still be populated from actionPath but is
+      ignored by the external branch (R-CARD-14).
+    - When demoUrl is absent OR actionPath is the intended primary
+      action: cta.kind = "internal", cta.internalPath = actionPath.
+    - Default when ambiguous: kind = "external" (every current record
+      has a demoUrl).
+
+C.3 CTA label fallback
+    cards[].cta.label default "View" (schema default) when admin has
+    not supplied a per-card label.
+
+C.4 Mobile media fallback
+    When products[].orderedImagesMobile is absent (Studio, Gateway,
+    Connect, PayMe Pro), emit NO role="mobile" media entries and rely
+    on siteConfig.fallbacks.useDesktopImagesOnMobile = true (default,
+    R-SITE-08) so desktop gallery media renders on mobile.
+
+C.5 Pricing currency fallback
+    cards[].pricing.currency inherits commerceConfig.currency and
+    ultimately siteConfig.defaultCurrency "USD" (R-CARD-16, R-SITE-05).
+    Migration tooling SHOULD write "USD" explicitly on each card for
+    round-trip stability.
+
+C.6 Pricing interval fallback
+    cards[].pricing.interval default "month",
+    cards[].pricing.intervalLabel default "mo" (R-CARD-17).
+
+C.7 Media mime fallback
+    Derive cards[].media[].mime and cards[].mainImage.mime from the
+    source file extension:
+        .png  -> image/png
+        .jpg  -> image/jpeg
+        .jpeg -> image/jpeg
+        .webp -> image/webp
+        .avif -> image/avif
+        .gif  -> image/gif
+        .svg  -> image/svg+xml
+    Unknown extensions: leave null (schema permits null).
+
+C.8 Media width/height fallback
+    Probe source asset dimensions at migration; on probe failure leave
+    width/height null (schema permits null).
+
+C.9 Media alt fallback
+    Default cards[].mainImage.alt and cards[].media[].alt to empty
+    string "" (schema default). Admin MUST supply accessibility text
+    post-migration.
+
+C.10 Card status/active mirror
+     Migrated cards SHOULD be emitted with status="active", active=true
+     so existing products continue to render. R-CARD-21 mirror rule
+     enforced:
+        status=active    => active=true
+        status=draft     => active=false
+        status=inactive  => active=false
+
+C.11 orderIndex assignment
+     cards[].orderIndex = source products[] array position (0-based),
+     unique across cards[] (R-CARD-22).
+
+C.12 id derivation
+     cards[].id = slug(products[].name) using Product.ts slug rule:
+        id = name.toLowerCase()
+                 .replace(/[^a-z0-9]+/g,'-')
+                 .replace(/(^-|-$)/g,'')
+     If collision, append "-" + last segment of productNumber.
+     Must satisfy pattern ^[A-Za-z0-9][A-Za-z0-9._-]{1,62}[A-Za-z0-9]$.
+
+C.13 sku derivation
+     cards[].sku = products[].productNumber verbatim (e.g. "xyz.0450").
+
+C.14 Timestamps
+     cards[].createdAt = cards[].updatedAt = meta.generatedAt at
+     migration run (ISO-8601 UTC, R-ROOT-02).
+
+C.15 Site-level active flag
+     siteConfig.active = true at migration so the storefront is live
+     unless the operator explicitly requests offline seeding
+     (R-SITE-09 / R-STATE-01).
+
+C.16 Package limit inference
+     siteConfig.packageCardLimit >= count of migrated cards with
+     status="active". If unspecified by operator, set to source count
+     (9) and siteConfig.packageTier = "studio" (advisory default per
+     R-LIMIT-05).
+
+================================================================
+SECTION D. UNRESOLVED PLACEHOLDERS REQUIRING MANUAL ADMIN COMPLETION
+================================================================
+
+D.1 siteConfig (no current source)
+    - siteId                  (admin: stable slug, immutable, R-SITE-02)
+    - siteName                (admin: operator-facing name)
+    - brandName               (admin: replaces "Factory Product Gallery",
+                               R-SITE-03)
+    - heroTitle               (admin: optional marketing copy)
+    - heroSubtitle            (admin: optional marketing copy)
+    - tagline                 (admin: optional marketing copy)
+    - layoutMode              (admin: gallery|swipe|grid; migration
+                               default "gallery")
+    - packageTier             (admin: starter|studio|pro|enterprise|
+                               custom)
+    - packageCardLimit        (admin: confirm cap)
+    - locale                  (admin: default "en-US")
+    - timezone                (admin: default "UTC")
+    - customDomain            (admin: optional; may be null)
+    - contactEmail            (admin: optional; may be null)
+    - logo                    (admin: upload mediaRef or null)
+    - favicon                 (admin: upload mediaRef or null)
+    - theme.mode              (admin: default "light")
+    - theme.primaryColor      (admin: #RRGGBB or #RRGGBBAA)
+    - theme.accentColor       (admin)
+    - theme.background        (admin)
+    - theme.foreground        (admin)
+    - theme.surface           (admin)
+    - theme.border            (admin)
+
+D.2 cards[] per-record placeholders
+    - thumbnail               (admin: optional mediaRef; or derive by
+                               resizing mainImage at migration tooling)
+    - mainImage.alt           (admin: accessibility text)
+    - mainImage.width/height  (auto-probe; admin if probe fails)
+    - media[].alt             (admin: per-asset accessibility text)
+    - media[].width/height    (auto-probe; admin if probe fails)
+    - media[].r2Key           (admin/tooling: on R2 migration, replaces
+                               url with R2 object key per
+                               r2_asset_conventions)
+    - cta.kind                (admin: confirm internal vs external per
+                               record)
+    - cta.label               (admin: per-card label; default "View")
+    - tags                    (admin: optional; default [])
+    - badges                  (admin: optional; default [])
+    - promoCode / promoDiscountPercent  (admin: both null unless set;
+                               R-CARD-19 requires paired presence)
+    - liveDemoUrl             (admin: optional; may be null)
+    - videoDemoUrl            (admin: optional; may be null)
+    - pricing.price           (admin/tooling: legacy passthrough,
+                               R-CARD-18; safe to omit)
+    - pricing.trial           (admin: optional)
+    - pricing.taxInclusive    (admin: default false)
+
+D.3 commerceConfig (no current source)
+    - provider                (admin: payme|stripe|placeholder;
+                               default "payme")
+    - mode                    (admin: test|live; default "test")
+    - currency                (admin: default "USD")
+    - publishableKey          (admin: may be null at seed; required
+                               before live)
+    - checkoutCreateUrl       (admin: REPLACES hardcoded
+                               https://api.xyz-labs.xyz/checkout/create
+                               per R-COMM-03)
+    - checkoutStatusUrl       (admin: REPLACES hardcoded
+                               https://api.xyz-labs.xyz/checkout/status
+                               per R-COMM-03)
+    - successUrlTemplate      (admin: default "{origin}/checkout/confirm")
+    - cancelUrlTemplate       (admin: default "{origin}/cart")
+    - sourceApp               (admin: default "gallery")
+    - checkoutMode            (admin: default "subscription")
+    - paymentMethods          (admin: default
+                               ["card","apple_pay","google_pay","usdc"])
+    - couponsEnabled          (admin: default true)
+    - subscriptionsEnabled    (admin: default true)
+    - taxMode                 (admin: default "none")
+    - webhookRef              (admin: optional; may be null)
+    - promos.launchParty      (admin: default code "LAUNCH30",
+                               percentOff 30)
+    - promos.usdc             (admin: default code "USDC", percentOff
+                               10, stacks=true, methodScope="usdc")
+    - usdc.receiveAddress     (admin: 0x + 40-hex; REQUIRED, no default)
+    - usdc.contract           (default 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913)
+    - usdc.decimals           (const 6)
+    - usdc.chainId            (const 8453)
+
+D.4 meta (no current source; tooling-populated)
+    - schemaVersion           (tooling: const "gallery-schema-v1",
+                               R-META-02)
+    - generatedAt             (tooling: ISO-8601 UTC at migration run)
+    - updatedAt               (tooling: ISO-8601 UTC at migration run)
+    - lastPublishedAt         (null at migration; set on first publish)
+    - updatedBy               (admin: operator identifier; may be null)
+    - source                  (tooling: "migration" for this run)
+    - environment             (admin: dev|staging|prod)
+    - deploymentRef           (admin/CI: optional; may be null)
+    - notes                   (admin: optional; may be null)
+
+D.5 Mobile media gaps (require admin upload or accept fallback)
+    - Studio      : orderedImagesMobile absent
+    - Gateway     : orderedImagesMobile absent
+    - Connect     : orderedImagesMobile absent
+    - PayMe Pro   : orderedImagesMobile absent
+    (Message Track, Showroom, Gallery, Biz Pages, Stickers carry
+    source mobile arrays.)
+    action: either accept desktop-on-mobile fallback
+            (siteConfig.fallbacks.useDesktopImagesOnMobile=true) or
+            admin uploads role="mobile" media entries post-migration.
+
+D.6 Description distinction (Studio only)
+    products[0] ("Studio") has distinct oneLinePromise vs
+    showroomDescription. Admin MUST confirm:
+      tagline     = "Design and deploy polished business pages fast."
+      description = "Create business pages in minutes."
+
+================================================================
+END CONSOLIDATED MIGRATION GUIDE
+================================================================

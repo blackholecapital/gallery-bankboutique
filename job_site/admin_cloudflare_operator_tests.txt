@@ -1,0 +1,65 @@
+[JOB-GALLERY-ADMIN-FLOW-V1 | WORKER B | S5 | RESULT]
+status: PASS
+
+required_references:
+- /job_site/cloudflare_deploy_planning_v1.txt
+- /job_site/operator_test_prompts_v1.txt
+- /job_site/admin_flow_verification_pack.txt
+
+operator_test_prompts:
+
+CF-T01 Build/output verification
+- Action: Trigger Pages build with `npm ci && npm run build`, output `dist`.
+- PASS: deploy artifact generated and served from Pages URL.
+
+CF-T02 Worker route ownership
+- Action: Hit deployed endpoints:
+  - `GET /admin/api/health` (or equivalent admin API route)
+  - `GET /checkout/status`
+- PASS: responses come from Worker route path; static routes still served by Pages.
+
+CF-T03 R2 binding smoke
+- Action: From authenticated admin flow, save dataset with an updated `siteConfig.brandName`.
+- PASS: dataset object at `gallery-assets/{siteId}/_dataset/gallery-schema-v1.json` updates and remains valid JSON.
+
+CF-T04 /admin access gate
+- Action: visit `/admin` without auth and with auth.
+- PASS: unauthenticated blocked; authenticated admin editor visible.
+
+CF-T05 Save/load persistence test
+- Action: in `/admin`, edit `siteConfig.brandName`; click Save; hard refresh `/admin`.
+- PASS: edited value persists after reload.
+
+CF-T06 Card image field persistence test
+- Action: edit a card `mainImage.r2Key` and thumbnail field; save; refresh.
+- PASS: image fields persist exactly and still validate.
+
+CF-T07 Package-limit activation test
+- Action: set active cards count equal to `packageCardLimit`; try activating one more card.
+- PASS: activation is blocked with limit rule feedback.
+
+CF-T08 Package-limit reduction test
+- Action: attempt lowering `packageCardLimit` below current active count; save.
+- PASS: save blocked until enough cards are deactivated.
+
+CF-T09 Active/inactive render test
+- Action: mark one card inactive, keep another active, save; open public gallery.
+- PASS: inactive card hidden; active card renders.
+
+CF-T10 Live render verification
+- Action: ensure at least one active card has distinct title/tagline/price in admin; save; visit public route.
+- PASS: public card content reflects admin-edited values.
+
+CF-T11 Asset host verification
+- Action: open public page and inspect `img src` for r2Key-backed media.
+- PASS: src resolves under `https://media-assets2.xyz-labs.xyz/...`.
+
+CF-T12 End-to-end deploy sanity
+- Action: run CF-T04 through CF-T11 on custom domain and on Pages preview URL.
+- PASS: both environments behave consistently, except domain-specific auth/routing settings.
+
+handoff_notes:
+- If `/admin/api/upload` is not yet implemented, run image-field tests using direct r2Key entry and dataset save path, then re-run CF-T06/CF-T11 after upload endpoint lands.
+
+artifacts:
+- /job_site/admin_cloudflare_operator_tests.txt

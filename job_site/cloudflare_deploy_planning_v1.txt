@@ -1,0 +1,197 @@
+CLOUDFLARE DEPLOY PLANNING v1
+job_id: JOB-GALLERY-SCHEMA-V1
+worker: WORKER B
+stage: S4
+artifact: /job_site/cloudflare_deploy_planning_v1.txt
+companions:
+  /job_site/gallery_schema_spec_v1.json
+  /job_site/admin_contract_v1.txt
+  /job_site/r2_asset_conventions_v1.txt
+
+================================================================
+1. TARGET TOPOLOGY
+================================================================
+
+1.1  Static SPA build (Vite output) served by Cloudflare Pages.
+1.2  Admin API + checkout proxy served by a Cloudflare Worker
+     (same zone), invoked via /admin/api/* and /checkout/* routes.
+1.3  Media served by R2 bucket media-assets2, fronted by custom
+     domain media-assets2.xyz-labs.xyz.
+1.4  Dataset JSON stored as a single object in R2 under
+     gallery-assets/{siteId}/_dataset/gallery-schema-v1.json.
+1.5  Optional KV namespace for admin session tokens.
+
+================================================================
+2. STEP-BASED DEPLOYMENT PLAN
+================================================================
+
+STEP 1  Create Cloudflare account scope
+  1.1  Select org "xyz Labs".
+  1.2  Confirm zone for the chosen customDomain exists.
+
+STEP 2  Provision R2
+  2.1  Bucket name: media-assets2 (reuse existing).
+  2.2  Enable public access; confirm custom domain binding to
+       media-assets2.xyz-labs.xyz.
+  2.3  Create top-level prefix gallery-assets/.
+  2.4  Leave legacy "showroom media/" untouched, read-only.
+
+STEP 3  Provision Pages project
+  3.1  Name: gallery-<siteId>.
+  3.2  Build command: npm ci && npm run build.
+  3.3  Output dir: dist.
+  3.4  Production branch: main. Preview branches: all others.
+
+STEP 4  Provision Worker
+  4.1  Name: gallery-<siteId>-api.
+  4.2  Entry: src/worker/index.ts.
+  4.3  Compatibility date: current.
+  4.4  Routes: <customDomain>/admin/api/*, <customDomain>/checkout/*.
+
+STEP 5  Bind resources to the Worker
+  5.1  R2 binding: MEDIA -> bucket media-assets2.
+  5.2  R2 binding: DATASET -> bucket media-assets2 (same bucket,
+       scoped reads/writes to gallery-assets/{siteId}/_dataset/).
+  5.3  KV binding: ADMIN_SESSIONS (optional).
+  5.4  Secret: ADMIN_AUTH_TOKEN.
+  5.5  Secret: PAYME_API_KEY (if server-side proxy used).
+  5.6  Var: SITE_ID = <siteConfig.siteId>.
+  5.7  Var: PUBLIC_ASSET_HOST = "https://media-assets2.xyz-labs.xyz".
+
+STEP 6  Wire Pages -> Worker
+  6.1  Pages Functions disabled; all dynamic paths routed to the
+       Worker via zone routes (step 4.4).
+  6.2  Pages serves everything else as static.
+
+STEP 7  Seed dataset
+  7.1  PUT gallery-assets/{siteId}/_dataset/gallery-schema-v1.json
+       (validated against gallery_schema_spec_v1.json).
+  7.2  Verify meta.schemaVersion="gallery-schema-v1",
+       meta.environment matches target (dev|staging|prod).
+
+STEP 8  Seed site assets
+  8.1  Upload logo to
+       gallery-assets/{siteId}/_site/logo/logo.{ext}.
+  8.2  Upload favicon to
+       gallery-assets/{siteId}/_site/favicon/favicon.{ext}.
+  8.3  Upload per-card media per r2_asset_conventions section 2.2.
+
+STEP 9  Bind custom domain
+  9.1  Add siteConfig.customDomain to dataset.
+  9.2  In Cloudflare: add custom domain on the Pages project.
+  9.3  Add zone routes on the Worker (step 4.4) for the same host.
+  9.4  Wait for TLS issuance; confirm HTTPS 200 on /.
+
+STEP 10 Smoke test
+  10.1 Public GET / returns gallery.
+  10.2 GET /admin returns login gate.
+  10.3 Authenticated POST /admin/api/save validates and writes
+       dataset.
+  10.4 GET /checkout/status proxies to commerceConfig
+       checkoutStatusUrl.
+
+STEP 11 Publish
+  11.1 Stamp meta.lastPublishedAt and meta.deploymentRef with the
+       Pages deployment id.
+  11.2 Resolver confirms every r2Key returns 200 before publish
+       completes.
+
+STEP 12 Post-deploy
+  12.1 Record deployment id in meta.deploymentRef.
+  12.2 Enable Cloudflare Access or equivalent on /admin routes.
+  12.3 Configure log push (Workers + Pages) to the org sink.
+
+================================================================
+3. R2 BUCKET USAGE
+================================================================
+
+3.1  Bucket: media-assets2.
+3.2  Prefixes:
+       gallery-assets/                       active writes
+       gallery-assets/{siteId}/              per-site namespace
+       gallery-assets/{siteId}/_site/        logo, favicon
+       gallery-assets/{siteId}/{cardId}/     per-card media
+       gallery-assets/{siteId}/_dataset/     canonical JSON
+       showroom media/                       legacy read-only
+3.3  Object naming per r2_asset_conventions 2.2 and 2.3.
+3.4  Content-Type set from MIME map (r2_asset_conventions 6.1).
+3.5  Storage class: Standard.
+3.6  Lifecycle: none on gallery-assets/; GC sweep (external job)
+     deletes orphans per r2_asset_conventions 5.4.
+3.7  CORS: allow GET from all origins; allow PUT only from Worker
+     origin (server-side signed uploads).
+3.8  Immutability: replace via -v2, -v3 suffix; never PUT over an
+     existing key.
+
+================================================================
+4. ENVIRONMENT BINDING (wrangler.toml shape)
+================================================================
+
+4.1  name = "gallery-<siteId>-api"
+4.2  main = "src/worker/index.ts"
+4.3  compatibility_date = "<current>"
+4.4  [vars]
+       SITE_ID              = "<siteId>"
+       PUBLIC_ASSET_HOST    = "https://media-assets2.xyz-labs.xyz"
+       ENVIRONMENT          = "prod" | "staging" | "dev"
+4.5  [[r2_buckets]]
+       binding    = "MEDIA"
+       bucket_name = "media-assets2"
+4.6  [[r2_buckets]]
+       binding    = "DATASET"
+       bucket_name = "media-assets2"
+4.7  [[kv_namespaces]]
+       binding = "ADMIN_SESSIONS"
+       id      = "<kv-id>"
+4.8  Secrets (wrangler secret put):
+       ADMIN_AUTH_TOKEN
+       PAYME_API_KEY           (optional, if proxying)
+4.9  Environments: [env.staging], [env.prod] each override SITE_ID,
+     ENVIRONMENT, and routes.
+4.10 Pages project env vars mirror PUBLIC_ASSET_HOST and SITE_ID
+     so the build can inline them.
+
+================================================================
+5. ASSET URL RESOLUTION
+================================================================
+
+5.1  Rule: publicUrl = `${PUBLIC_ASSET_HOST}/${r2Key}`.
+5.2  Applied at publish time by the Worker; runtime UI receives
+     plain absolute URLs and performs no rewriting (C-FLOW-05).
+5.3  Precedence (mediaAsset oneOf):
+       url present    -> use verbatim
+       r2Key present  -> resolve via 5.1
+5.4  siteConfig.customDomain is unrelated to PUBLIC_ASSET_HOST;
+     asset URLs remain on media-assets2.xyz-labs.xyz.
+5.5  Cache: immutable keys; replacement uses new key (v2, v3 ...).
+5.6  Resolver runs preflight HEAD on every r2Key before publish;
+     any 404 blocks publish.
+5.7  Site-level refs (logo, favicon) resolve against the same host
+     via gallery-assets/{siteId}/_site/ keys.
+
+================================================================
+6. CUSTOM DOMAIN ROUTING
+================================================================
+
+6.1  Source: siteConfig.customDomain (schema pattern-validated).
+6.2  Pages: add custom domain on the Pages project; Cloudflare
+     issues TLS.
+6.3  Worker routes on the same host:
+       <customDomain>/admin/api/*
+       <customDomain>/admin/api
+       <customDomain>/checkout/*
+       <customDomain>/checkout
+6.4  Pages handles all other paths including /admin UI shell.
+6.5  Apex vs subdomain: both supported; apex uses CNAME flattening.
+6.6  Removal: detach custom domain in Cloudflare, clear
+     siteConfig.customDomain, republish. *.pages.dev host remains.
+6.7  Multi-site on same zone: each siteId maps to its own
+     customDomain; Workers are namespaced per site (step 4.1).
+6.8  Access control: Cloudflare Access rule on
+     <customDomain>/admin* restricts to admin identity provider.
+6.9  successUrlTemplate {origin} expands to the request origin;
+     on the custom domain it becomes https://<customDomain>.
+
+================================================================
+END OF CLOUDFLARE DEPLOY PLANNING v1
+================================================================

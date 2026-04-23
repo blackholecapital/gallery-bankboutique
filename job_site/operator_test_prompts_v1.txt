@@ -1,0 +1,280 @@
+OPERATOR TEST PROMPTS v1
+job_id: JOB-GALLERY-SCHEMA-V1
+worker: WORKER B
+stage: S4
+artifact: /job_site/operator_test_prompts_v1.txt
+companions:
+  /job_site/gallery_schema_spec_v1.json
+  /job_site/admin_contract_v1.txt
+  /job_site/r2_asset_conventions_v1.txt
+
+FORMAT
+  Each prompt: ID, action, expected result. One scenario per prompt.
+  PASS = expected result observed exactly. FAIL = anything else.
+
+================================================================
+1. ADMIN SAVE / LOAD
+================================================================
+
+T-SAVE-01
+  Open /admin. Confirm all Section A editable fields render enabled
+  and all (R) fields render disabled.
+  PASS: editability matches admin_contract_v1 Section A.
+
+T-SAVE-02
+  Load canonical dataset. Confirm meta.schemaVersion displays as
+  "gallery-schema-v1" and is not editable.
+  PASS: field shown read-only with exact value.
+
+T-SAVE-03
+  Edit siteConfig.brandName, click Save. Reload page.
+  PASS: new brandName persists; meta.updatedAt advanced;
+  meta.lastPublishedAt unchanged; meta.source="admin".
+
+T-SAVE-04
+  Save with cards[0].bullets reduced to 2 entries.
+  PASS: save blocked with rule id R-CARD-07 and JSON path
+  /cards/0/bullets. No partial write.
+
+T-SAVE-05
+  Inject an unknown top-level key (e.g. "extras") into the dataset
+  and attempt Load.
+  PASS: load rejected with R-ROOT-01 / additionalProperties error.
+
+T-SAVE-06
+  Edit legacy pricing.price directly in the admin UI.
+  PASS: field is read-only and cannot be edited; round-trips
+  unchanged on save.
+
+T-SAVE-07
+  Click Publish on a valid dataset.
+  PASS: meta.lastPublishedAt and meta.updatedAt both advance to now;
+  siteConfig.siteId becomes permanently locked.
+
+================================================================
+2. R2 IMAGE UPLOAD AND PUBLIC RENDER
+================================================================
+
+T-R2-01
+  Upload a PNG to cards[0].media[] role="gallery", orderIndex=1.
+  PASS: r2Key minted as
+  gallery-assets/{siteId}/{cardId}/gallery/01-{slug}.png;
+  lowercase, no spaces, <=1024 chars.
+
+T-R2-02
+  Upload a file named "Hero Image (v2).PNG".
+  PASS: key normalized to lowercase, spaces/parentheses rejected or
+  slugified; validator accepts the emitted key.
+
+T-R2-03
+  Attempt to upload a .heic file.
+  PASS: upload rejected per r2_asset_conventions section 6.6.
+
+T-R2-04
+  Attempt to upload a 30 MB image.
+  PASS: upload rejected (per_object_max = 25 MB).
+
+T-R2-05
+  Publish a card with a role="main" mediaAsset that has r2Key set.
+  Open the public gallery.
+  PASS: <img src> equals
+  https://media-assets2.xyz-labs.xyz/{r2Key}
+  and returns HTTP 200.
+
+T-R2-06
+  Replace the main image via the admin "replace" action.
+  PASS: new key ends in -v2 suffix, old key remains in R2, card
+  references the new key only, cards[].updatedAt advanced.
+
+T-R2-07
+  Set a mediaAsset.url (absolute) instead of r2Key; publish.
+  PASS: <img src> equals the url verbatim; no rewriting applied.
+
+T-R2-08
+  Publish with an r2Key pointing at a non-existent object.
+  PASS: publish fails with a missing-object error (section 7.5).
+
+T-R2-09
+  Reorder cards[0].media[] entries.
+  PASS: orderIndex values update; r2Key strings unchanged;
+  display order reflects new orderIndex.
+
+================================================================
+3. CARD LIMIT ENFORCEMENT
+================================================================
+
+T-LIMIT-01
+  Set siteConfig.packageCardLimit=3 with 3 active cards. Attempt to
+  flip a 4th card from draft to active.
+  PASS: activation rejected with R-LIMIT-04 citation.
+
+T-LIMIT-02
+  Same state. Create a new card with status="draft".
+  PASS: allowed; active count unchanged.
+
+T-LIMIT-03
+  Same state. Attempt to reduce packageCardLimit to 2.
+  PASS: save rejected with R-LIMIT-06; operator instructed to
+  deactivate first.
+
+T-LIMIT-04
+  Deactivate 1 active card, then re-run T-LIMIT-03.
+  PASS: packageCardLimit reduction succeeds.
+
+T-LIMIT-05
+  Set siteConfig.active=false with 3 active cards over a limit of 2
+  and attempt save.
+  PASS: save still rejected (R-STATE-01: offline flag does not
+  exempt limit check).
+
+T-LIMIT-06
+  Create 501 cards total (any status).
+  PASS: rejected; cards[] hard max is 500 regardless of tier.
+
+================================================================
+4. ACTIVE / INACTIVE CARD BEHAVIOR
+================================================================
+
+T-STATE-01
+  Set cards[0].status="active" then Save.
+  PASS: cards[0].active auto-set to true; no direct edit of active
+  allowed.
+
+T-STATE-02
+  Set cards[0].status="inactive". Visit the public gallery.
+  PASS: card hidden from listing; direct slug URL returns 404.
+
+T-STATE-03
+  Set cards[0].status="draft". Visit the public gallery.
+  PASS: card hidden; slot freed under packageCardLimit.
+
+T-STATE-04
+  Set siteConfig.active=false. Visit the public site.
+  PASS: offline placeholder rendered; all cards suppressed
+  regardless of per-card status.
+
+T-STATE-05
+  Rename cards[0].title (slug changes). Save.
+  PASS: save succeeds with non-blocking warning about orphaned
+  cart/estimate entries; slug updated; cards[0].id unchanged.
+
+T-STATE-06
+  Attempt to change cards[0].id after publish.
+  PASS: field is locked; edit rejected.
+
+T-STATE-07
+  Delete cards[0] via admin.
+  PASS: explicit confirmation required; entry removed from cards[];
+  meta.updatedAt advanced; R2 assets NOT auto-deleted.
+
+================================================================
+5. CHECKOUT CONFIG SWAP
+================================================================
+
+T-CHK-01
+  Change commerceConfig.checkoutCreateUrl to a new https URL. Save.
+  Click Buy on a card.
+  PASS: POST goes to new URL; old hardcoded
+  api.xyz-labs.xyz/checkout/create no longer contacted.
+
+T-CHK-02
+  Change commerceConfig.checkoutStatusUrl. Return from a checkout.
+  PASS: confirm page polls the new status URL.
+
+T-CHK-03
+  Set commerceConfig.mode="test". Initiate checkout.
+  PASS: request metadata reflects test mode; provider shows
+  test-mode session.
+
+T-CHK-04
+  Set commerceConfig.paymentMethods=["card"] only.
+  PASS: PayMe card UI shows only Card; apple_pay/google_pay/usdc
+  methods hidden.
+
+T-CHK-05
+  Set commerceConfig.successUrlTemplate="{origin}/thanks".
+  Complete a checkout.
+  PASS: redirect resolves to <origin>/thanks with {origin} expanded.
+
+T-CHK-06
+  Set commerceConfig.sourceApp="bank-boutique". Initiate checkout.
+  PASS: request payload metadata.source_app="bank-boutique".
+
+T-CHK-07
+  Toggle commerceConfig.couponsEnabled=false.
+  PASS: promo input hidden in cart; applied promo cleared.
+
+T-CHK-08
+  Update commerceConfig.usdc.receiveAddress to a new 0x... address.
+  Initiate USDC checkout with no localStorage override.
+  PASS: transfer targets the schema address. With localStorage
+  'payme_usdc_address' set, the override wins.
+
+T-CHK-09
+  Set commerceConfig.promos.launchParty.code="LAUNCH20",
+  percentOff=20. Apply "LAUNCH20" in cart.
+  PASS: total reflects 20% off setupPrice per applicable cards.
+
+T-CHK-10
+  Attempt to save commerceConfig.checkoutCreateUrl="ftp://foo".
+  PASS: save rejected; format=uri violation reported.
+
+================================================================
+6. DEPLOYMENT VERIFICATION (WORKERS / PAGES + CUSTOM DOMAIN)
+================================================================
+
+T-DEPLOY-01
+  Deploy the storefront to Cloudflare Pages. Open the *.pages.dev
+  preview URL.
+  PASS: gallery renders; brandName/heroTitle reflect current dataset.
+
+T-DEPLOY-02
+  Inspect meta.deploymentRef after deploy.
+  PASS: populated with the Pages/Workers deployment identifier.
+
+T-DEPLOY-03
+  Confirm /admin route is reachable behind auth on the deployed
+  build.
+  PASS: unauthenticated access blocked; authenticated Section A
+  editor renders.
+
+T-DEPLOY-04
+  Set siteConfig.customDomain="shop.example.com" and bind the
+  domain in Cloudflare. Visit https://shop.example.com.
+  PASS: TLS valid; storefront served; Cloudflare headers present
+  (cf-ray, server: cloudflare).
+
+T-DEPLOY-05
+  Visit https://shop.example.com/admin.
+  PASS: admin routes resolve on the custom domain behind the same
+  auth as T-DEPLOY-03.
+
+T-DEPLOY-06
+  Load a card with r2Key-backed mainImage on the custom domain.
+  PASS: <img src> still points at
+  https://media-assets2.xyz-labs.xyz/... (asset host independent
+  of customDomain per r2_asset_conventions 3.6).
+
+T-DEPLOY-07
+  Force-refresh with cache disabled on an R2-backed asset.
+  PASS: asset returns 200 with cf-cache-status HIT or MISS; no
+  client-side cache-busting query string added by the app.
+
+T-DEPLOY-08
+  Trigger checkout from the custom domain.
+  PASS: successUrlTemplate {origin} expands to
+  https://shop.example.com; redirect returns to the custom domain.
+
+T-DEPLOY-09
+  Rollback to the previous Pages/Workers deployment.
+  PASS: prior dataset renders; meta.deploymentRef reflects the
+  rolled-back build.
+
+T-DEPLOY-10
+  Remove siteConfig.customDomain and revert to the *.pages.dev host.
+  PASS: storefront still reachable on Pages host; custom domain
+  stops resolving after Cloudflare unbind.
+
+================================================================
+END OF OPERATOR TEST PROMPTS v1
+================================================================

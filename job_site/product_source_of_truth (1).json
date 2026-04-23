@@ -1,0 +1,261 @@
+{
+  "products": [
+    {
+      "name": "Studio",
+      "productNumber": "xyz.0444",
+      "oneLinePromise": "Design and deploy polished business pages fast.",
+      "showroomDescription": "Create business pages in minutes.",
+      "buyerOutcome": "Go from idea to live page in minutes with drag-and-drop tools.",
+      "actionPath": "/profile/studio",
+      "demoUrl": "https://studio.xyz-labs.xyz/",
+      "orderedImages": [
+        "/sho1.png",
+        "/Studio1.png",
+        "/Studio2.png",
+        "/Studio3.png",
+        "/Studio4.png",
+        "/Studio5.png",
+        "/Studio6.png"
+      ],
+      "bullets": [
+        "Drag-and-drop page builder with real-time preview",
+        "Polished launch surfaces for any product or service",
+        "Branded page templates with custom fonts and colors",
+        "One-click deploy to your own domain",
+        "Mobile-responsive output by default"
+      ],
+      "pricing": {
+        "setup": 199,
+        "monthly": 20
+      }
+    },
+    {
+      "name": "Gateway",
+      "productNumber": "xyz.0445",
+      "oneLinePromise": "Your web business front end, ready to run.",
+      "showroomDescription": "Your web business front end, ready to run.",
+      "buyerOutcome": "Launch a complete storefront with checkout and customer tools built in.",
+      "actionPath": "/profile/gateway",
+      "demoUrl": "https://gateway.xyz-labs.xyz/",
+      "orderedImages": [
+        "/Gateway1.png",
+        "/Gateway2.png",
+        "/Gateway3.png",
+        "/Gateway4.png",
+        "/Gateway5.png",
+        "/Gateway6.png",
+        "/Gateway7.png"
+      ],
+      "bullets": [
+        "Integrated checkout and payment processing",
+        "Built-in customer service area with ticket routing",
+        "Business-in-a-box setup with guided onboarding",
+        "Upgrade-ready customer flows for subscriptions and upsells"
+      ],
+      "pricing": {
+        "setup": 999,
+        "monthly": 20
+      }
+    },
+    {
+      "name": "Connect",
+      "productNumber": "xyz.0446",
+      "oneLinePromise": "Customer access and connection tools.",
+      "showroomDescription": "Customer access and connection tools.",
+      "buyerOutcome": "Grow and engage your audience from one branded hub.",
+      "actionPath": "/profile/connect",
+      "demoUrl": "https://connect.xyz-labs.xyz/",
+      "orderedImages": [
+        "/connect1.png",
+        "/connect2.png",
+        "/connect3.png",
+        "/connect4.png",
+        "/connect6.png"
+      ],
+      "bullets": [
+        "Community touchpoints across web, mobile, and social",
+        "Branded interaction surfaces with your look and feel",
+        "Built-in audience growth tools and referral tracking",
+        "Social presentation layer for content and announcements"
+      ],
+      "pricing": {
+        "setup": 99,
+        "monthly": 10
+      }
+    },
+    {
+      "name": "PayMe Pro",
+      "productNumber": "xyz.0447",
+      "oneLinePromise": "Payment requests, billing, and checkout tools.",
+      "showroomDescription": "Payment requests, billing, and checkout tools.",
+      "buyerOutcome": "Sell more with flexible checkout, coupons, and customer insights.",
+      "actionPath": "/profile/payme-pro",
+      "demoUrl": "https://payme.xyz-labs.xyz/",
+      "orderedImages": [
+        "/paymepro1.png",
+        "/paymepro2.png",
+        "/paymepro3.png",
+        "/paymepro4.png",
+        "/paymepro5.png",
+        "/paymepro6.png"
+      ],
+      "bullets": [
+        "Flexible selling with one-time and recurring checkout flows",
+        "Coupon codes and promotional pricing built in",
+        "Streamlined checkout with saved payment methods",
+        "Light CRM with customer profiles and purchase history"
+      ],
+      "pricing": {
+        "setup": 199,
+        "monthly": 10
+      }
+    },
+    {
+      "name": "Message Track",
+      "productNumber": "xyz.0448",
+      "oneLinePromise": "Real-time message tracking for client-facing updates.",
+      "showroomDescription": "Real-time message tracking for client-facing updates.",
+      "buyerOutcome": "Keep clients in the loop with a lightweight, always-current status surface.",
+      "actionPath": "/profile/message-track",
+      "demoUrl": "https://message-track.xyz-labs.xyz/",
+      "orderedImages": [
+        "/mt1.png",
+        "/mt2.png",
+        "/mt3.png",
+        "/mt4.png",
+        "/mt5.png"
+      ],
+      "orderedImagesMobile": [
+        "/mt1m.jpeg",
+        "/mt2m.jpeg",
+        "/mt3m.jpeg",
+        "/mt4m.png",
+        "/mt5m.jpeg"
+      ],
+      "bullets": [
+        "Real-time message tracking surface",
+        "Lightweight client-facing status page",
+        "Built for fast updates + clean UI"
+      ],
+      "pricing": {
+        "setup": 199,
+        "monthly": 20
+      }
+    },
+    {
+      "name": "Showroom",
+      "productNumber": "xyz.0449",
+      "oneLinePromise": "Premium product placement landing page with 3D showroom feel.",
+      "showroomDescription": "Premium product placement landing page with 3D showroom feel.",
+      "buyerOutcome": "Launch a high-end micro-sales surface with built-in checkout and admin.",
+      "actionPath": "/profile/showroom",
+      "demoUrl": "https://showroom.xyz-labs.xyz/",
+      "orderedImages": [
+        "/sho1.png",
+        "/Sho2.png",
+        "/Sho3.png"
+      ],
+      "orderedImagesMobile": [
+        "/sho1m.png",
+        "/sho2m.png",
+        "/sho3m.png"
+      ],
+      "bullets": [
+        "Premium product placement landing page (3D depth / showroom feel)",
+        "Product tiles + \"PayMe\" checkout built-in",
+        "Admin page + multiple payment options",
+        "Micro-sales system optimized for premium offers"
+      ],
+      "pricing": {
+        "setup": 199,
+        "monthly": 20
+      }
+    },
+    {
+      "name": "Gallery",
+      "productNumber": "xyz.0450",
+      "oneLinePromise": "Premium product placement landing page with gallery-style presentation.",
+      "showroomDescription": "Premium product placement landing page with gallery-style presentation.",
+      "buyerOutcome": "Showcase premium product drops in a curated, gallery-style launch surface.",
+      "actionPath": "/profile/gallery",
+      "demoUrl": "https://gallery.xyz-labs.xyz/browse",
+      "orderedImages": [
+        "/gal1.png",
+        "/gal2.png",
+        "/gal3.png"
+      ],
+      "orderedImagesMobile": [
+        "/gal1.png",
+        "/gal2m.png",
+        "/gal3m.png"
+      ],
+      "bullets": [
+        "Premium product placement landing page (gallery-style presentation)",
+        "Product tiles + \"PayMe\" checkout built-in",
+        "Admin page + multiple payment options",
+        "Micro-sales system for premium product drops"
+      ],
+      "pricing": {
+        "setup": 199,
+        "monthly": 20
+      }
+    },
+    {
+      "name": "Biz Pages",
+      "productNumber": "xyz.0451",
+      "oneLinePromise": "Business pages system with Gateway-style layout.",
+      "showroomDescription": "Business pages system with Gateway-style layout.",
+      "buyerOutcome": "Run services or products with 3 customizable pages plus a customer area.",
+      "actionPath": "/profile/biz-pages",
+      "demoUrl": "https://bizpages.xyz-labs.xyz/home",
+      "orderedImages": [
+        "/Biz1.png",
+        "/Biz2.png",
+        "/biz3.png"
+      ],
+      "orderedImagesMobile": [
+        "/Biz1.png",
+        "/Biz2.png",
+        "/biz3.png"
+      ],
+      "bullets": [
+        "Business pages system (Gateway-style layout without Web3 interface)",
+        "3 customizable pages + Customer area",
+        "PayMe Pro light CRM features",
+        "Built for services/products with admin + customer flow"
+      ],
+      "pricing": {
+        "setup": 599,
+        "monthly": 20
+      }
+    },
+    {
+      "name": "Stickers",
+      "productNumber": "xyz.0452",
+      "oneLinePromise": "Customizable stickers app for schools, groups, and clubs.",
+      "showroomDescription": "Customizable stickers app for schools, groups, and clubs.",
+      "buyerOutcome": "Run a fun, guided sticker customization flow built for easy sharing.",
+      "actionPath": "/profile/stickers",
+      "demoUrl": "https://stickers.xyz-labs.xyz/",
+      "orderedImages": [
+        "/stick1.png",
+        "/Stick2.png",
+        "/Stick3.png"
+      ],
+      "orderedImagesMobile": [
+        "/stick1m.png",
+        "/stick2m.png",
+        "/Stick3.png"
+      ],
+      "bullets": [
+        "Customizable stickers app/game for school, group, or club",
+        "Simple guided customization flow",
+        "Designed for fun engagement + easy sharing"
+      ],
+      "pricing": {
+        "setup": 199,
+        "monthly": 10
+      }
+    }
+  ]
+}

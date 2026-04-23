@@ -1,0 +1,472 @@
+form_id:build-sheet
+
+1. JOB
+   1.1 job_id: JOB-GALLERY-ADMIN-FLOW-V1
+   1.2 job_name: Gallery Schema-Backed Admin Flow Implementation
+   1.3 objective: Implement the actual `/admin` one-page editor that manages gallery site settings, card records, package-card limits, and schema-backed save/load behavior using the approved gallery source-of-truth structure.
+   1.4 requested_outcome: Replace the current placeholder `/admin` page with a working schema-backed admin flow that can load, edit, validate, and save siteConfig, cards, commerceConfig, and meta-aligned records, with image field support prepared for R2 integration and renderer compatibility.
+   1.5 target_root_path: /job_site/
+   1.6 target_repo_url: [https://github.com/blackholecapital/gallery-bankboutique](https://github.com/blackholecapital/gallery-bankboutique)
+   1.7 inspection_url:
+
+2. RUN CONTROL
+   2.1 mode: lean_factory_single_build
+   2.2 execution_foreman: Foreman A
+   2.3 checksum_foreman: Foreman B
+   2.4 final_validator: Factory Control Interface
+
+3. TAG FORMAT
+   3.1 foreman_header
+   3.1.1 job_id:
+   3.1.2 foreman:
+   3.1.3 current_stage:
+   3.1.4 current_pass:
+   3.1.5 next_stage:
+   3.1.6 next_owner:
+   3.1.7 passes_remaining:
+   3.1.8 status:
+   3.1.9 current_action:
+
+3.2 worker_tag_format
+3.2.1 [job_id | WORKER | STAGE | RESULT]
+
+4. PATHS
+   4.1 stage_activity_log: /job_site/stage_activity_log.txt
+   4.2 final_checksum_path: /job_site/admin_flow_checksum_report.txt
+   4.3 final_tps_report: /job_site/TPS_REPORT.txt
+
+5. REFERENCES
+   5.1 required_references:
+
+   * /job_site/build_sheet.txt
+   * /job_site/gallery_schema_spec_v1.json
+   * /job_site/gallery_schema_rules_v1.txt
+   * /job_site/gallery_schema_example_v1.json
+   * /job_site/admin_contract_v1.txt
+   * /job_site/r2_asset_conventions_v1.txt
+   * /job_site/cloudflare_deploy_planning_v1.txt
+   * /job_site/operator_test_prompts_v1.txt
+   * /mnt/data/gallery-bankboutique-main (1).zip
+   * /mnt/data/gallery-bankboutique-main.zip
+   * /mnt/data/product_source_of_truth (1).json
+   * /mnt/data/factory-manual-v1.11.txt
+   * /mnt/data/foreman-manual-v1.11.txt
+   * /mnt/data/worker-execution-manual-v1.1.txt
+   * /mnt/data/build-sheet v3.txt
+     5.2 external_references:
+   * Existing `/admin` route and `AdminPage.tsx`
+   * Existing gallery/swipe renderer data flow
+   * Existing checkout and config touchpoints
+   * Cloudflare Pages/Workers/R2 target deployment plan
+
+6. STAGE
+   6.1 stage_id: S1
+   6.2 stage_name: Admin Integration Audit And Execution Plan
+   6.3 stage_owner: Foreman A
+   6.4 stage_goal: Audit the current admin route, schema package, renderer data flow, and storage touchpoints to define the exact implementation path for the one-page schema-backed admin.
+   6.5 stage_inputs:
+
+   * Approved schema package in /job_site/
+   * Attached gallery code archive
+   * Current repo structure and route/admin implementation
+
+6.6 worker_a_order
+6.6.1 [JOB-GALLERY-ADMIN-FLOW-V1 | WORKER A | S1 | RESULT]
+6.6.2 expected_status: PASS
+6.6.3 task: Audit the current admin route and page implementation, identify all files currently powering `/admin`, and produce an implementation note covering which files must be replaced, extended, or added to support the schema-backed one-page admin flow.
+6.6.4 expected_artifacts:
+
+* /job_site/admin_flow_current_state_audit.txt
+* /job_site/admin_flow_target_file_map.txt
+  6.6.5 required_references:
+* /mnt/data/gallery-bankboutique-main (1).zip
+* /mnt/data/gallery-bankboutique-main.zip
+* /job_site/admin_contract_v1.txt
+* /job_site/gallery_schema_spec_v1.json
+* /mnt/data/worker-execution-manual-v1.1.txt
+  6.6.6 repo_mirror_required: yes
+  6.6.7 commit_required: yes
+  6.6.8 push_required: yes
+
+6.7 worker_b_order
+6.7.1 [JOB-GALLERY-ADMIN-FLOW-V1 | WORKER B | S1 | RESULT]
+6.7.2 expected_status: PASS
+6.7.3 task: Audit current data flow and identify the minimum schema load/save, validation, and renderer compatibility requirements the admin must satisfy. Limit output to implementation constraints and exact data dependencies only.
+6.7.4 expected_artifacts:
+
+* /job_site/admin_flow_data_dependency_notes.txt
+* /job_site/admin_flow_validation_requirements.txt
+  6.7.5 required_references:
+* /mnt/data/gallery-bankboutique-main (1).zip
+* /job_site/gallery_schema_spec_v1.json
+* /job_site/gallery_schema_rules_v1.txt
+* /job_site/gallery_schema_example_v1.json
+* /job_site/admin_contract_v1.txt
+* /mnt/data/worker-execution-manual-v1.1.txt
+  6.7.6 repo_mirror_required: yes
+  6.7.7 commit_required: yes
+  6.7.8 push_required: yes
+
+6.8 required_stage_artifacts:
+
+* /job_site/admin_flow_current_state_audit.txt
+* /job_site/admin_flow_target_file_map.txt
+* /job_site/admin_flow_data_dependency_notes.txt
+* /job_site/admin_flow_validation_requirements.txt
+  6.9 checkpoint_id: CP-S1-ADMIN-AUDIT
+
+7. VALIDATION CHECKS
+   7.1 pass_condition: All four S1 artifacts exist at exact paths and explicitly identify current `/admin` implementation, target files, schema dependencies, and validation requirements without expanding scope beyond the one-page admin flow.
+   7.2 patch_condition: Any artifact is missing, wrong path, or omits current admin file mapping, schema dependencies, or validation rules.
+   7.3 handoff_on_pass: Hand off to Foreman B for checksum of S1 artifacts, then proceed to S2 on PASS.
+   7.4 handoff_on_patch: Return to Foreman A for correction within S1 scope.
+   7.5 handoff_on_error: Return to Factory Control Interface.
+
+8. STAGE
+   6.1 stage_id: S2
+   6.2 stage_name: Admin Data Layer And Schema Utilities
+   6.3 stage_owner: Foreman A
+   6.4 stage_goal: Implement the schema-backed admin data layer for loading, normalizing, validating, and saving storefront/admin records using the approved source-of-truth structure.
+   6.5 stage_inputs:
+
+   * S1 approved artifacts
+   * Approved schema package
+
+6.6 worker_a_order
+6.6.1 [JOB-GALLERY-ADMIN-FLOW-V1 | WORKER A | S2 | RESULT]
+6.6.2 expected_status: PASS
+6.6.3 task: Implement the admin data utilities required to load the active dataset, apply the approved schema shape, validate required fields and package-card limits, and expose deterministic save/load functions for the admin page. Add only the code and helper files needed for this data layer.
+6.6.4 expected_artifacts:
+
+* repo code changes enabling schema-backed admin dataset load/save
+* /job_site/admin_data_layer_change_log.txt
+* /job_site/admin_data_contract_notes.txt
+  6.6.5 required_references:
+* /job_site/gallery_schema_spec_v1.json
+* /job_site/gallery_schema_rules_v1.txt
+* /job_site/gallery_schema_example_v1.json
+* /job_site/admin_contract_v1.txt
+* /job_site/admin_flow_target_file_map.txt
+* /job_site/admin_flow_validation_requirements.txt
+* /mnt/data/gallery-bankboutique-main (1).zip
+* /mnt/data/worker-execution-manual-v1.1.txt
+  6.6.6 repo_mirror_required: yes
+  6.6.7 commit_required: yes
+  6.6.8 push_required: yes
+
+6.7 worker_b_order
+6.7.1 [JOB-GALLERY-ADMIN-FLOW-V1 | WORKER B | S2 | RESULT]
+6.7.2 expected_status: PASS
+6.7.3 task: Implement or patch the schema fixture/source integration so the admin can read an initial dataset and persist edited values through the approved runtime path used by this app. Keep scope limited to admin-side save/load support and do not redesign renderer architecture.
+6.7.4 expected_artifacts:
+
+* repo code changes enabling initial dataset hydration for admin
+* /job_site/admin_dataset_integration_log.txt
+  6.7.5 required_references:
+* /job_site/gallery_schema_example_v1.json
+* /job_site/admin_data_dependency_notes.txt
+* /job_site/admin_flow_target_file_map.txt
+* /mnt/data/gallery-bankboutique-main (1).zip
+* /mnt/data/worker-execution-manual-v1.1.txt
+  6.7.6 repo_mirror_required: yes
+  6.7.7 commit_required: yes
+  6.7.8 push_required: yes
+
+6.8 required_stage_artifacts:
+
+* /job_site/admin_data_layer_change_log.txt
+* /job_site/admin_data_contract_notes.txt
+* /job_site/admin_dataset_integration_log.txt
+* repo code changes for schema-backed admin load/save
+  6.9 checkpoint_id: CP-S2-ADMIN-DATA-LAYER
+
+7. VALIDATION CHECKS
+   7.1 pass_condition: The repo contains working admin data-layer code for schema-backed load/save, required validation logic exists, package-card limit logic is enforced in code, and all declared S2 artifacts exist at exact paths.
+   7.2 patch_condition: Missing repo changes, ambiguous save/load path, missing validation logic, or missing S2 artifacts.
+   7.3 handoff_on_pass: Hand off to Foreman B for checksum of S2 code and artifacts, then proceed to S3 on PASS.
+   7.4 handoff_on_patch: Return to Foreman A for S2 correction.
+   7.5 handoff_on_error: Return to Factory Control Interface.
+
+8. STAGE
+   6.1 stage_id: S3
+   6.2 stage_name: One-Page Admin UI Implementation
+   6.3 stage_owner: Foreman A
+   6.4 stage_goal: Replace the placeholder admin page with the actual one-page schema-backed UI for site settings and card management.
+   6.5 stage_inputs:
+
+   * S2 approved code and artifacts
+   * Approved admin contract
+
+6.6 worker_a_order
+6.6.1 [JOB-GALLERY-ADMIN-FLOW-V1 | WORKER A | S3 | RESULT]
+6.6.2 expected_status: PASS
+6.6.3 task: Implement the top section of `/admin` for site-level editing using the approved schema/admin contract. Include only fields required for V1: business/store fields, CTA/config basics, package-card limit display or edit as approved, and save/load wiring to the schema-backed data layer.
+6.6.4 expected_artifacts:
+
+* repo code changes for site-level admin section
+* /job_site/admin_ui_site_section_log.txt
+  6.6.5 required_references:
+* /job_site/admin_contract_v1.txt
+* /job_site/gallery_schema_spec_v1.json
+* /job_site/admin_data_contract_notes.txt
+* /mnt/data/gallery-bankboutique-main (1).zip
+* /mnt/data/worker-execution-manual-v1.1.txt
+  6.6.6 repo_mirror_required: yes
+  6.6.7 commit_required: yes
+  6.6.8 push_required: yes
+
+6.7 worker_b_order
+6.7.1 [JOB-GALLERY-ADMIN-FLOW-V1 | WORKER B | S3 | RESULT]
+6.7.2 expected_status: PASS
+6.7.3 task: Implement the card-management section of `/admin` with bounded one-page behavior only. Include card selector or list, title, SKU, price, short/full description, main image field, thumbnail fields 1 to 5, active toggle, sort/order support, and package-limit-aware create/update/deactivate behavior.
+6.7.4 expected_artifacts:
+
+* repo code changes for card-management admin section
+* /job_site/admin_ui_card_section_log.txt
+  6.7.5 required_references:
+* /job_site/admin_contract_v1.txt
+* /job_site/gallery_schema_spec_v1.json
+* /job_site/gallery_schema_example_v1.json
+* /job_site/admin_flow_validation_requirements.txt
+* /mnt/data/gallery-bankboutique-main (1).zip
+* /mnt/data/worker-execution-manual-v1.1.txt
+  6.7.6 repo_mirror_required: yes
+  6.7.7 commit_required: yes
+  6.7.8 push_required: yes
+
+6.8 required_stage_artifacts:
+
+* /job_site/admin_ui_site_section_log.txt
+* /job_site/admin_ui_card_section_log.txt
+* repo code changes for actual one-page `/admin`
+  6.9 checkpoint_id: CP-S3-ADMIN-UI
+
+7. VALIDATION CHECKS
+   7.1 pass_condition: `/admin` is implemented as a real one-page editor, the placeholder payout-only behavior is removed or subordinated to the new admin flow, site and card sections exist, and all declared S3 artifacts exist at exact paths.
+   7.2 patch_condition: `/admin` remains placeholder-only, missing site/card sections, fields not aligned to schema/admin contract, or missing S3 artifacts.
+   7.3 handoff_on_pass: Hand off to Foreman B for checksum of UI behavior, then proceed to S4 on PASS.
+   7.4 handoff_on_patch: Return to Foreman A for S3 correction.
+   7.5 handoff_on_error: Return to Factory Control Interface.
+
+8. STAGE
+   6.1 stage_id: S4
+   6.2 stage_name: Renderer Binding And Edit Persistence Verification
+   6.3 stage_owner: Foreman A
+   6.4 stage_goal: Ensure admin edits persist through the approved runtime path and that the gallery/swipe surface can consume the edited schema-backed dataset without breaking the current shell.
+   6.5 stage_inputs:
+
+   * S3 approved admin implementation
+   * Existing gallery/swipe renderer
+
+6.6 worker_a_order
+6.6.1 [JOB-GALLERY-ADMIN-FLOW-V1 | WORKER A | S4 | RESULT]
+6.6.2 expected_status: PASS
+6.6.3 task: Bind the gallery/swipe data consumption path to the approved schema-backed dataset or adapter required for this build so that admin edits affect runtime card content. Keep scope limited to compatibility and do not redesign the renderer shell.
+6.6.4 expected_artifacts:
+
+* repo code changes for renderer/admin dataset compatibility
+* /job_site/admin_renderer_binding_log.txt
+  6.6.5 required_references:
+* /job_site/gallery_schema_spec_v1.json
+* /job_site/gallery_schema_example_v1.json
+* /job_site/admin_data_dependency_notes.txt
+* /mnt/data/gallery-bankboutique-main (1).zip
+* /mnt/data/worker-execution-manual-v1.1.txt
+  6.6.6 repo_mirror_required: yes
+  6.6.7 commit_required: yes
+  6.6.8 push_required: yes
+
+6.7 worker_b_order
+6.7.1 [JOB-GALLERY-ADMIN-FLOW-V1 | WORKER B | S4 | RESULT]
+6.7.2 expected_status: PASS
+6.7.3 task: Produce the admin-flow verification pack covering save/load behavior, active/inactive card behavior, package-card limit enforcement, field persistence, and renderer compatibility. Include operator-run test steps tied to the implemented admin flow only.
+6.7.4 expected_artifacts:
+
+* /job_site/admin_flow_verification_pack.txt
+* /job_site/admin_flow_operator_test_steps.txt
+  6.7.5 required_references:
+* /job_site/operator_test_prompts_v1.txt
+* /job_site/admin_contract_v1.txt
+* /job_site/admin_ui_site_section_log.txt
+* /job_site/admin_ui_card_section_log.txt
+* /mnt/data/worker-execution-manual-v1.1.txt
+  6.7.6 repo_mirror_required: yes
+  6.7.7 commit_required: yes
+  6.7.8 push_required: yes
+
+6.8 required_stage_artifacts:
+
+* /job_site/admin_renderer_binding_log.txt
+* /job_site/admin_flow_verification_pack.txt
+* /job_site/admin_flow_operator_test_steps.txt
+* repo code changes for renderer/admin compatibility
+  6.9 checkpoint_id: CP-S4-ADMIN-BINDING
+
+7. VALIDATION CHECKS
+   7.1 pass_condition: Admin edits persist through the declared runtime path, the renderer can consume the edited dataset without breaking, and all declared S4 artifacts exist at exact paths.
+   7.2 patch_condition: Admin edits do not persist, renderer remains detached from edited data, or missing S4 artifacts.
+   7.3 handoff_on_pass: Hand off to Foreman B for checksum of S4 outputs, then proceed to S5 on PASS.
+   7.4 handoff_on_patch: Return to Foreman A for S4 correction.
+   7.5 handoff_on_error: Return to Factory Control Interface.
+
+8. STAGE
+   6.1 stage_id: S5
+   6.2 stage_name: R2 Prep And Cloudflare Deployment Closeout
+   6.3 stage_owner: Foreman A
+   6.4 stage_goal: Complete implementation notes and deployment prep for the admin flow so it can be tested locally and deployed to Cloudflare Pages/Workers/R2 with the required bindings and operator prompts.
+   6.5 stage_inputs:
+
+   * S1 through S4 approved artifacts
+   * Approved Cloudflare/R2 planning package
+
+6.6 worker_a_order
+6.6.1 [JOB-GALLERY-ADMIN-FLOW-V1 | WORKER A | S5 | RESULT]
+6.6.2 expected_status: PASS
+6.6.3 task: Produce implementation-closeout notes for image field handling and R2 upload readiness. Include what is wired now, what remains placeholder or adapter-based, exact environment variables or bindings needed, and how `/admin` should hand off image fields to R2-compatible storage in the next run if not fully implemented here.
+6.6.4 expected_artifacts:
+
+* /job_site/admin_r2_readiness_notes.txt
+* /job_site/admin_env_binding_requirements.txt
+  6.6.5 required_references:
+* /job_site/r2_asset_conventions_v1.txt
+* /job_site/cloudflare_deploy_planning_v1.txt
+* /job_site/admin_flow_target_file_map.txt
+* /mnt/data/worker-execution-manual-v1.1.txt
+  6.6.6 repo_mirror_required: yes
+  6.6.7 commit_required: yes
+  6.6.8 push_required: yes
+
+6.7 worker_b_order
+6.7.1 [JOB-GALLERY-ADMIN-FLOW-V1 | WORKER B | S5 | RESULT]
+6.7.2 expected_status: PASS
+6.7.3 task: Produce Cloudflare deployment prompts and operator test prompts for the implemented admin flow. Include Pages build command, output directory, Worker/API expectations if used, R2 bindings, `/admin` access tests, save/load tests, package limit tests, and live render verification tests.
+6.7.4 expected_artifacts:
+
+* /job_site/admin_cloudflare_deploy_prompts.txt
+* /job_site/admin_cloudflare_operator_tests.txt
+  6.7.5 required_references:
+* /job_site/cloudflare_deploy_planning_v1.txt
+* /job_site/operator_test_prompts_v1.txt
+* /job_site/admin_flow_verification_pack.txt
+* /mnt/data/gallery-bankboutique-main (1).zip
+* /mnt/data/worker-execution-manual-v1.1.txt
+  6.7.6 repo_mirror_required: yes
+  6.7.7 commit_required: yes
+  6.7.8 push_required: yes
+
+6.8 required_stage_artifacts:
+
+* /job_site/admin_r2_readiness_notes.txt
+* /job_site/admin_env_binding_requirements.txt
+* /job_site/admin_cloudflare_deploy_prompts.txt
+* /job_site/admin_cloudflare_operator_tests.txt
+  6.9 checkpoint_id: CP-S5-DEPLOY-CLOSEOUT
+
+7. VALIDATION CHECKS
+   7.1 pass_condition: All S5 artifacts exist at exact paths and clearly define current R2 readiness, required env/bindings, Cloudflare deploy prompts, and operator tests for the implemented admin flow.
+   7.2 patch_condition: Missing S5 artifacts, missing Cloudflare prompts, or missing R2/env binding notes.
+   7.3 handoff_on_pass: Hand off to Foreman B for final checksum, then proceed to final validation on PASS.
+   7.4 handoff_on_patch: Return to Foreman A for S5 correction.
+   7.5 handoff_on_error: Return to Factory Control Interface.
+
+8. FINAL VALIDATION
+   8.1 required_inputs:
+
+   * /job_site/admin_flow_current_state_audit.txt
+   * /job_site/admin_flow_target_file_map.txt
+   * /job_site/admin_flow_data_dependency_notes.txt
+   * /job_site/admin_flow_validation_requirements.txt
+   * /job_site/admin_data_layer_change_log.txt
+   * /job_site/admin_data_contract_notes.txt
+   * /job_site/admin_dataset_integration_log.txt
+   * /job_site/admin_ui_site_section_log.txt
+   * /job_site/admin_ui_card_section_log.txt
+   * /job_site/admin_renderer_binding_log.txt
+   * /job_site/admin_flow_verification_pack.txt
+   * /job_site/admin_flow_operator_test_steps.txt
+   * /job_site/admin_r2_readiness_notes.txt
+   * /job_site/admin_env_binding_requirements.txt
+   * /job_site/admin_cloudflare_deploy_prompts.txt
+   * /job_site/admin_cloudflare_operator_tests.txt
+   * /job_site/stage_activity_log.txt
+   * /job_site/admin_flow_checksum_report.txt
+   * /job_site/TPS_REPORT.txt
+   * repo evidence showing committed admin implementation
+     8.2 validation_check_1: Confirm `/admin` is now a real schema-backed one-page editor and no longer limited to the prior payout-only placeholder behavior.
+     8.3 validation_check_2: Confirm the implemented admin supports site-level editing, card create/update/deactivate behavior, package-card limit enforcement, and persistence through the declared runtime path.
+     8.4 validation_check_3: Confirm renderer compatibility, Cloudflare deployment prompts, R2 readiness notes, and operator test prompts exist and align to the implemented admin flow.
+     8.5 outputs:
+   * Working schema-backed admin flow committed to repo
+   * Final checksum report at /job_site/admin_flow_checksum_report.txt
+   * Final TPS report at /job_site/TPS_REPORT.txt
+     8.6 completion_status: PASS only when all declared stage artifacts exist, repo changes are committed and pushed, `/admin` behavior matches the contract, and final checksum passes.
+
+9. FOREMAN OUTPUT FORM
+   9.1 job_id:
+   9.2 foreman:
+   9.3 current_stage:
+   9.4 current_pass:
+   9.5 next_stage:
+   9.6 next_owner:
+   9.7 passes_remaining:
+   9.8 status:
+   9.9 current_action:
+   9.10 artifacts:
+   9.11 checkpoint_result:
+   9.12 handoff_instruction:
+   9.13 issue:
+
+10. WORKER DISPATCH FORM
+    10.1 [job_id | WORKER | STAGE | RESULT]
+    10.2 expected_status:
+    10.3 task:
+    10.4 expected_artifacts:
+    10.5 required_references:
+    10.6 repo_mirror_required:
+    10.7 commit_required:
+    10.8 push_required:
+
+11. WORKER RESULT FORM
+    11.1 [job_id | WORKER | STAGE | RESULT]
+    11.2 status:
+    11.3 artifacts:
+    11.4 summary:
+    11.5 issues:
+
+12. TPS REPORT FORM
+    12.1 job_id: JOB-GALLERY-ADMIN-FLOW-V1
+    12.2 completion_status:
+    12.3 job_summary:
+    12.4 stage_results:
+    12.5 artifact_summary:
+    12.6 patch_history:
+    12.7 closeout_note:
+
+13. REFERENCE MATERIAL
+    13.1 job_site: /job_site/
+    13.2 target_file_system: repo working tree plus /job_site/
+    13.3 factory_manual: /mnt/data/factory-manual-v1.11.txt
+    13.4 foreman_manual: /mnt/data/foreman-manual-v1.11.txt
+    13.5 worker_execution_manual: /mnt/data/worker-execution-manual-v1.1.txt
+    13.6 active_build_sheet: /job_site/build_sheet.txt
+    13.7 reference_repo_1:
+    13.7.1 url: [https://github.com/blackholecapital/gallery-bankboutique](https://github.com/blackholecapital/gallery-bankboutique)
+    13.7.2 reference_use: Active gallery/swipe codebase and target admin implementation repo
+    13.8 reference_repo_2:
+    13.8.1 url:
+    13.8.2 reference_use: Attached zip mirrors for local audit and code mapping
+    13.9 reference_repo_3:
+    13.9.1 url:
+    13.9.2 reference_use: Approved schema/admin/R2/Cloudflare package in /job_site/
+
+FORM LAW BLOCK
+L1. stage numbering must use S1, S2, S3 format only
+L2. field numbering must use 1.1, 1.2, 1.3 format only
+L3. foreman status values allowed: PASS | PATCH | ERROR
+L4. worker status values allowed: PASS | PATCH
+L5. unused fields must remain blank
+L6. do not delete fields from the template
+L7. all expected_artifacts must be exact target paths
+L8. worker dispatch tag must exactly match worker result tag format
+L9. required_references only in worker orders
+L10. all file writes must use declared target paths only

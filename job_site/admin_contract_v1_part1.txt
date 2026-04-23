@@ -1,0 +1,177 @@
+ADMIN CONTRACT v1 - PART 1
+job_id: JOB-GALLERY-SCHEMA-V1
+worker: WORKER B
+stage: S3
+scope: Editable fields and direct schema paths only.
+companion_schema: /job_site/gallery_schema_spec_v1.json
+companion_rules:  /job_site/gallery_schema_rules_v1.txt
+
+LEGEND
+  E   = editable in /admin
+  E*  = editable on create only (immutable after first publish)
+  R   = read-only (system-managed / derived / const)
+  Path is JSON-pointer-style into the dataset root.
+
+================================================================
+1. siteConfig
+================================================================
+E*  siteId                                    siteConfig.siteId
+E   siteName                                  siteConfig.siteName
+E   brandName                                 siteConfig.brandName
+E   heroTitle                                 siteConfig.heroTitle
+E   heroSubtitle                              siteConfig.heroSubtitle
+E   tagline                                   siteConfig.tagline
+E   layoutMode                                siteConfig.layoutMode
+E   active                                    siteConfig.active
+E   packageTier                               siteConfig.packageTier
+E   packageCardLimit                          siteConfig.packageCardLimit
+E   defaultCurrency                           siteConfig.defaultCurrency
+E   locale                                    siteConfig.locale
+E   timezone                                  siteConfig.timezone
+E   customDomain                              siteConfig.customDomain
+E   contactEmail                              siteConfig.contactEmail
+E   logo.url                                  siteConfig.logo.url
+E   logo.r2Key                                siteConfig.logo.r2Key
+E   logo.role                                 siteConfig.logo.role
+E   logo.alt                                  siteConfig.logo.alt
+E   logo.width                                siteConfig.logo.width
+E   logo.height                               siteConfig.logo.height
+E   logo.mime                                 siteConfig.logo.mime
+E   favicon.url                               siteConfig.favicon.url
+E   favicon.r2Key                             siteConfig.favicon.r2Key
+E   favicon.role                              siteConfig.favicon.role
+E   favicon.alt                               siteConfig.favicon.alt
+E   favicon.width                             siteConfig.favicon.width
+E   favicon.height                            siteConfig.favicon.height
+E   favicon.mime                              siteConfig.favicon.mime
+E   theme.mode                                siteConfig.theme.mode
+E   theme.primaryColor                        siteConfig.theme.primaryColor
+E   theme.accentColor                         siteConfig.theme.accentColor
+E   theme.background                          siteConfig.theme.background
+E   theme.foreground                          siteConfig.theme.foreground
+E   theme.surface                             siteConfig.theme.surface
+E   theme.border                              siteConfig.theme.border
+E   fallbacks.useDesktopImagesOnMobile        siteConfig.fallbacks.useDesktopImagesOnMobile
+
+================================================================
+2. cards  (repeated per entry; index i)
+================================================================
+E*  id                                        cards[i].id
+E   sku                                       cards[i].sku
+E   title                                     cards[i].title
+E   tagline                                   cards[i].tagline
+E   description                               cards[i].description
+E   outcome                                   cards[i].outcome
+E   bullets[]                                 cards[i].bullets
+E   tags[]                                    cards[i].tags
+E   badges[]                                  cards[i].badges
+E   promoCode                                 cards[i].promoCode
+E   promoDiscountPercent                      cards[i].promoDiscountPercent
+E   status                                    cards[i].status
+R   active                                    cards[i].active          (mirror of status)
+E   orderIndex                                cards[i].orderIndex
+E   liveDemoUrl                               cards[i].liveDemoUrl
+E   videoDemoUrl                              cards[i].videoDemoUrl
+R   createdAt                                 cards[i].createdAt
+R   updatedAt                                 cards[i].updatedAt
+
+  mainImage (single-asset):
+E   mainImage.role                            cards[i].mainImage.role
+E   mainImage.url                             cards[i].mainImage.url
+E   mainImage.r2Key                           cards[i].mainImage.r2Key
+E   mainImage.alt                             cards[i].mainImage.alt
+E   mainImage.width                           cards[i].mainImage.width
+E   mainImage.height                          cards[i].mainImage.height
+E   mainImage.mime                            cards[i].mainImage.mime
+
+  thumbnail (single-asset, nullable):
+E   thumbnail.role                            cards[i].thumbnail.role
+E   thumbnail.url                             cards[i].thumbnail.url
+E   thumbnail.r2Key                           cards[i].thumbnail.r2Key
+E   thumbnail.alt                             cards[i].thumbnail.alt
+E   thumbnail.width                           cards[i].thumbnail.width
+E   thumbnail.height                          cards[i].thumbnail.height
+E   thumbnail.mime                            cards[i].thumbnail.mime
+
+  media[] (repeated per entry; index j):
+E*  media[j].id                               cards[i].media[j].id
+E   media[j].role                             cards[i].media[j].role
+E   media[j].orderIndex                       cards[i].media[j].orderIndex
+E   media[j].url                              cards[i].media[j].url
+E   media[j].r2Key                            cards[i].media[j].r2Key
+E   media[j].alt                              cards[i].media[j].alt
+E   media[j].width                            cards[i].media[j].width
+E   media[j].height                           cards[i].media[j].height
+E   media[j].mime                             cards[i].media[j].mime
+
+  cta:
+E   cta.kind                                  cards[i].cta.kind
+E   cta.label                                 cards[i].cta.label
+E   cta.internalPath                          cards[i].cta.internalPath
+E   cta.externalUrl                           cards[i].cta.externalUrl
+
+  pricing:
+E   pricing.setup                             cards[i].pricing.setup
+E   pricing.monthly                           cards[i].pricing.monthly
+E   pricing.currency                          cards[i].pricing.currency
+E   pricing.interval                          cards[i].pricing.interval
+E   pricing.intervalLabel                     cards[i].pricing.intervalLabel
+R   pricing.price                             cards[i].pricing.price    (legacy, write-through only)
+E   pricing.trial.days                        cards[i].pricing.trial.days
+E   pricing.taxInclusive                      cards[i].pricing.taxInclusive
+
+================================================================
+3. commerceConfig
+================================================================
+E   provider                                  commerceConfig.provider
+E   mode                                      commerceConfig.mode
+E   currency                                  commerceConfig.currency
+E   publishableKey                            commerceConfig.publishableKey
+E   checkoutCreateUrl                         commerceConfig.checkoutCreateUrl
+E   checkoutStatusUrl                         commerceConfig.checkoutStatusUrl
+E   successUrlTemplate                        commerceConfig.successUrlTemplate
+E   cancelUrlTemplate                         commerceConfig.cancelUrlTemplate
+E   sourceApp                                 commerceConfig.sourceApp
+E   checkoutMode                              commerceConfig.checkoutMode
+E   paymentMethods[]                          commerceConfig.paymentMethods
+E   couponsEnabled                            commerceConfig.couponsEnabled
+E   subscriptionsEnabled                      commerceConfig.subscriptionsEnabled
+E   taxMode                                   commerceConfig.taxMode
+E   webhookRef                                commerceConfig.webhookRef
+
+  promos.launchParty:
+E   promos.launchParty.code                   commerceConfig.promos.launchParty.code
+E   promos.launchParty.percentOff             commerceConfig.promos.launchParty.percentOff
+E   promos.launchParty.label                  commerceConfig.promos.launchParty.label
+E   promos.launchParty.stacks                 commerceConfig.promos.launchParty.stacks
+E   promos.launchParty.methodScope            commerceConfig.promos.launchParty.methodScope
+
+  promos.usdc:
+E   promos.usdc.code                          commerceConfig.promos.usdc.code
+E   promos.usdc.percentOff                    commerceConfig.promos.usdc.percentOff
+E   promos.usdc.label                         commerceConfig.promos.usdc.label
+E   promos.usdc.stacks                        commerceConfig.promos.usdc.stacks
+E   promos.usdc.methodScope                   commerceConfig.promos.usdc.methodScope
+
+  usdc:
+E   usdc.receiveAddress                       commerceConfig.usdc.receiveAddress
+E   usdc.contract                             commerceConfig.usdc.contract
+R   usdc.decimals                             commerceConfig.usdc.decimals      (const 6)
+R   usdc.chainId                              commerceConfig.usdc.chainId       (const 8453)
+
+================================================================
+4. meta
+================================================================
+R   schemaVersion                             meta.schemaVersion      (const "gallery-schema-v1")
+R   generatedAt                               meta.generatedAt
+R   updatedAt                                 meta.updatedAt
+R   lastPublishedAt                           meta.lastPublishedAt
+R   updatedBy                                 meta.updatedBy
+E   source                                    meta.source
+E   environment                               meta.environment
+R   deploymentRef                             meta.deploymentRef
+E   notes                                     meta.notes
+
+================================================================
+END OF PART 1
+================================================================

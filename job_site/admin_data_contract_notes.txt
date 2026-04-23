@@ -1,0 +1,18 @@
+Contract alignment notes (S2 data layer)
+
+1) Root shape enforcement
+- Validator enforces exact root keys: siteConfig, cards, commerceConfig, meta (R-ROOT-01).
+
+2) Required save/load behavior
+- loadAdminDataset(): deterministic fallback to schema-shaped default dataset.
+- saveAdminDataset(): normalizes/stamps meta fields, validates, and writes only when validation passes.
+
+3) Validation coverage included
+- Required cross-field constraints: unique card id/sku/slug/orderIndex, status-active mirror, promo co-requirement, CTA branch rules, media url/r2Key exclusivity, media per-role order uniqueness.
+- Package limit checks: over-limit save rejection, activation gate helper, lowering-limit gate helper.
+
+4) Determinism
+- Serialized payload uses deep key sorting + stable JSON formatting for deterministic persistence output.
+
+5) Scope isolation
+- Utilities are self-contained under src/admin-flow/* and do not alter renderer shells.

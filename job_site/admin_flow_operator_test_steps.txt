@@ -1,0 +1,81 @@
+ADMIN FLOW OPERATOR TEST STEPS (IMPLEMENTED SCOPE)
+job_id: JOB-GALLERY-ADMIN-FLOW-V1
+stage: S4
+status_target: PASS
+
+preconditions:
+1) Start app and open /admin.
+2) If VITE_ADMIN_CODE is configured, enter correct code.
+3) Open browser devtools Application -> Local Storage.
+4) Ensure key artist-connect.admin.dataset.v1 exists after first save.
+
+STEP-01 | Save/load persistence (site field)
+action:
+- Change siteConfig.brandName in /admin.
+- Click "Save admin dataset".
+- Reload page.
+expected:
+- brandName persists after reload.
+- top header still reports schema-backed source.
+
+STEP-02 | Save/load persistence (commerce field)
+action:
+- Change commerceConfig.sourceApp and commerceConfig.successUrlTemplate.
+- Save and reload.
+expected:
+- both values persist from localStorage-backed dataset.
+
+STEP-03 | Save block on validation error (bullets rule)
+action:
+- Select a card and reduce bullets to fewer than 3 entries using dataset edit path (or create invalid saved payload in localStorage then load).
+- Attempt save.
+expected:
+- save blocked.
+- validation list includes rule id/path for card-bullets constraint (R-CARD-07 equivalent).
+- no partial write of invalid dataset.
+
+STEP-04 | Card create + field persistence
+action:
+- Click "Create draft card".
+- Edit title, SKU, setup price, tagline, description, main image field, thumbnail fields 1..5, orderIndex.
+- Save and reload.
+expected:
+- created card remains present and selected by id.
+- edited values persist.
+- setup price round-trips with pricing.price mirror behavior.
+
+STEP-05 | Package-limit activation guard
+action:
+- Set siteConfig.packageCardLimit equal to current active count.
+- Try to activate a draft/inactive card via Active toggle.
+expected:
+- activation blocked.
+- UI message includes C-LIMIT-02-style package-limit error.
+
+STEP-06 | Deactivate behavior
+action:
+- For an active card, toggle Active off.
+- Save and reload.
+expected:
+- card status is inactive and active=false in persisted dataset.
+- record remains in cards list.
+
+STEP-07 | Renderer compatibility binding
+action:
+- Ensure at least one active card in admin dataset with distinct title/tagline/price.
+- Save dataset.
+- Open /browse (or renderer entry route) in a fresh tab.
+expected:
+- browse/swipe cards reflect admin dataset values for active cards.
+- inactive/draft cards are not shown from admin dataset path.
+
+STEP-08 | Renderer fallback behavior
+action:
+- Temporarily remove artist-connect.admin.dataset.v1 from localStorage.
+- Reload /browse.
+expected:
+- renderer falls back to fixture product set.
+
+pass_criteria:
+- PASS when all expected results above are observed exactly.
+- FAIL on any mismatch, missing persistence, or renderer/admin divergence.

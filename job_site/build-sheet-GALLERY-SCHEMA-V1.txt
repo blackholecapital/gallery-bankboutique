@@ -1,0 +1,377 @@
+form_id:build-sheet
+
+1. JOB
+   1.1 job_id: JOB-GALLERY-SCHEMA-V1
+   1.2 job_name: Gallery JSON Source-of-Truth Schema Foundation
+   1.3 objective: Define and approve the normalized JSON schema that will serve as the single source of truth for gallery/swipe demos, /admin editing, R2-hosted media assets, and customer handoff builds.
+   1.4 requested_outcome: One approved schema package with canonical JSON structure, field rules, example payload, validation notes, migration map from current product JSON, Cloudflare/R2 asset conventions, and operator test prompts for future implementation.
+   1.5 target_root_path: /job_site/
+   1.6 target_repo_url:
+   1.7 inspection_url:
+
+2. RUN CONTROL
+   2.1 mode: lean_factory_single_build
+   2.2 execution_foreman: Foreman A
+   2.3 checksum_foreman: Foreman B
+   2.4 final_validator: Factory Control Interface
+
+3. TAG FORMAT
+   3.1 foreman_header
+   3.1.1 job_id:
+   3.1.2 foreman:
+   3.1.3 current_stage:
+   3.1.4 current_pass:
+   3.1.5 next_stage:
+   3.1.6 next_owner:
+   3.1.7 passes_remaining:
+   3.1.8 status:
+   3.1.9 current_action:
+
+3.2 worker_tag_format
+3.2.1 [job_id | WORKER | STAGE | RESULT]
+
+4. PATHS
+   4.1 stage_activity_log: /job_site/stage_activity_log.txt
+   4.2 final_checksum_path: /job_site/schema_checksum_report.txt
+   4.3 final_tps_report: /job_site/TPS_REPORT.txt
+
+5. REFERENCES
+   5.1 required_references:
+
+   * /job_site/build_sheet.txt
+   * /mnt/data/product_source_of_truth (1).json
+   * /mnt/data/gallery-bankboutique-main.zip
+   * /mnt/data/96ec7e95-0ef3-48ac-a306-3d438e0b4478.png
+   * /mnt/data/factory-manual-v1.11.txt
+   * /mnt/data/foreman-manual-v1.11.txt
+   * /mnt/data/worker-execution-manual-v1.1.txt
+   * /mnt/data/build-sheet v3.txt
+     5.2 external_references:
+   * Existing gallery/swipe chassis in gallery-bankboutique-main
+   * Cloudflare R2 bucket pattern shown in attached screenshot
+   * Current product source JSON shape from attached file
+
+6. STAGE
+   6.1 stage_id: S1
+   6.2 stage_name: Schema Discovery And Field Inventory
+   6.3 stage_owner: Foreman A
+   6.4 stage_goal: Extract current source fields, identify required target domains, and compile schema requirements for site config, cards, commerce config, meta, and Cloudflare asset handling.
+   6.5 stage_inputs:
+
+   * Current JSON file
+   * Gallery code archive
+   * Attached R2 screenshot
+   * Prior operator constraints discussed in run
+
+6.6 worker_a_order
+6.6.1 [JOB-GALLERY-SCHEMA-V1 | WORKER A | S1 | RESULT]
+6.6.2 expected_status: PASS
+6.6.3 task: Review the current product JSON and extract all current fields, nesting, repeated structures, and missing fields relative to the desired gallery/admin model. Produce a field inventory and migration note document with exact proposed target domains: siteConfig, cards, commerceConfig, meta.
+6.6.4 expected_artifacts:
+
+* /job_site/schema_field_inventory.txt
+* /job_site/current_to_target_field_map.txt
+  6.6.5 required_references:
+* /mnt/data/product_source_of_truth (1).json
+* /mnt/data/build-sheet v3.txt
+* /mnt/data/worker-execution-manual-v1.1.txt
+  6.6.6 repo_mirror_required: no
+  6.6.7 commit_required: no
+  6.6.8 push_required: no
+
+6.7 worker_b_order
+6.7.1 [JOB-GALLERY-SCHEMA-V1 | WORKER B | S1 | RESULT]
+6.7.2 expected_status: PASS
+6.7.3 task: Review the gallery code archive and identify the minimum content fields required by the current swipe/gallery UI and any known admin/payment/config touchpoints that the schema must support. Produce an implementation dependency note limited to field needs and data flow constraints only.
+6.7.4 expected_artifacts:
+
+* /job_site/ui_field_dependency_notes.txt
+* /job_site/schema_constraints_from_code.txt
+  6.7.5 required_references:
+* /mnt/data/gallery-bankboutique-main.zip
+* /mnt/data/worker-execution-manual-v1.1.txt
+  6.7.6 repo_mirror_required: no
+  6.7.7 commit_required: no
+  6.7.8 push_required: no
+
+6.8 required_stage_artifacts:
+
+* /job_site/schema_field_inventory.txt
+* /job_site/current_to_target_field_map.txt
+* /job_site/ui_field_dependency_notes.txt
+* /job_site/schema_constraints_from_code.txt
+  6.9 checkpoint_id: CP-S1-FIELD-INVENTORY
+
+7. VALIDATION CHECKS
+   7.1 pass_condition: All four S1 artifacts exist at exact paths and explicitly cover current JSON fields, target schema domains, UI field dependencies, and code-derived constraints.
+   7.2 patch_condition: Any artifact is missing, uses wrong path, omits one of the required target domains, or includes redesign beyond schema scope.
+   7.3 handoff_on_pass: Hand off to Foreman B for checksum of S1 artifacts, then proceed to S2 on PASS.
+   7.4 handoff_on_patch: Return to Foreman A for artifact correction within S1 scope.
+   7.5 handoff_on_error: Return to Factory Control Interface.
+
+8. STAGE
+   6.1 stage_id: S2
+   6.2 stage_name: Canonical Schema Draft
+   6.3 stage_owner: Foreman A
+   6.4 stage_goal: Produce the first canonical JSON schema package, including field definitions, constraints, defaults, image handling conventions, and exact object structure.
+   6.5 stage_inputs:
+
+   * S1 approved artifacts
+
+6.6 worker_a_order
+6.6.1 [JOB-GALLERY-SCHEMA-V1 | WORKER A | S2 | RESULT]
+6.6.2 expected_status: PASS
+6.6.3 task: Draft the canonical schema specification document defining exact top-level objects, required and optional fields, data types, limits, and validation rules for siteConfig, cards, commerceConfig, and meta. Include package/card-limit enforcement fields and active/inactive behavior.
+6.6.4 expected_artifacts:
+
+* /job_site/gallery_schema_spec_v1.json
+* /job_site/gallery_schema_rules_v1.txt
+  6.6.5 required_references:
+* /job_site/schema_field_inventory.txt
+* /job_site/current_to_target_field_map.txt
+* /job_site/ui_field_dependency_notes.txt
+* /job_site/schema_constraints_from_code.txt
+* /mnt/data/worker-execution-manual-v1.1.txt
+  6.6.6 repo_mirror_required: no
+  6.6.7 commit_required: no
+  6.6.8 push_required: no
+
+6.7 worker_b_order
+6.7.1 [JOB-GALLERY-SCHEMA-V1 | WORKER B | S2 | RESULT]
+6.7.2 expected_status: PASS
+6.7.3 task: Draft a canonical example payload that conforms to the schema and demonstrates one storefront with three cards, R2-style asset references, pricing data, checkout config placeholders, and metadata fields. Keep example values realistic and implementation-ready.
+6.6.4 expected_artifacts:
+
+* /job_site/gallery_schema_example_v1.json
+  6.7.5 required_references:
+* /job_site/gallery_schema_spec_v1.json
+* /job_site/gallery_schema_rules_v1.txt
+* /mnt/data/product_source_of_truth (1).json
+* /mnt/data/worker-execution-manual-v1.1.txt
+  6.7.6 repo_mirror_required: no
+  6.7.7 commit_required: no
+  6.7.8 push_required: no
+
+6.8 required_stage_artifacts:
+
+* /job_site/gallery_schema_spec_v1.json
+* /job_site/gallery_schema_rules_v1.txt
+* /job_site/gallery_schema_example_v1.json
+  6.9 checkpoint_id: CP-S2-CANONICAL-SCHEMA
+
+7. VALIDATION CHECKS
+   7.1 pass_condition: All S2 artifacts exist at exact paths and the schema clearly defines top-level objects, field types, required/optional status, card limits, media fields, and example payload conformance.
+   7.2 patch_condition: Missing artifact, ambiguous field type, missing top-level object, no example payload, or no explicit limit/media rules.
+   7.3 handoff_on_pass: Hand off to Foreman B for checksum of schema completeness, then proceed to S3 on PASS.
+   7.4 handoff_on_patch: Return to Foreman A for S2 correction.
+   7.5 handoff_on_error: Return to Factory Control Interface.
+
+8. STAGE
+   6.1 stage_id: S3
+   6.2 stage_name: Cloudflare R2 And Admin Contract Addendum
+   6.3 stage_owner: Foreman A
+   6.4 stage_goal: Extend the schema package with Cloudflare/R2 asset conventions and /admin field contract so future implementation can bind uploads, public URLs, and editing behavior deterministically.
+   6.5 stage_inputs:
+
+   * S2 approved schema artifacts
+   * Attached R2 screenshot
+
+6.6 worker_a_order
+6.6.1 [JOB-GALLERY-SCHEMA-V1 | WORKER A | S3 | RESULT]
+6.6.2 expected_status: PASS
+6.6.3 task: Produce an asset convention document defining R2 object-key format, public URL resolution strategy, main image and thumbnail handling, replacement/update behavior, and accepted media field formats for the schema.
+6.6.4 expected_artifacts:
+
+* /job_site/r2_asset_conventions_v1.txt
+  6.6.5 required_references:
+* /mnt/data/96ec7e95-0ef3-48ac-a306-3d438e0b4478.png
+* /job_site/gallery_schema_spec_v1.json
+* /job_site/gallery_schema_rules_v1.txt
+* /mnt/data/worker-execution-manual-v1.1.txt
+  6.6.6 repo_mirror_required: no
+  6.6.7 commit_required: no
+  6.6.8 push_required: no
+
+6.7 worker_b_order
+6.7.1 [JOB-GALLERY-SCHEMA-V1 | WORKER B | S3 | RESULT]
+6.7.2 expected_status: PASS
+6.7.3 task: Produce the /admin contract document defining the exact editable fields, card creation/update/deactivation rules, package-limit enforcement behavior, save/load expectations, and field-to-schema mapping. Limit scope to one-page admin behavior only.
+6.7.4 expected_artifacts:
+
+* /job_site/admin_contract_v1.txt
+  6.7.5 required_references:
+* /job_site/gallery_schema_spec_v1.json
+* /job_site/gallery_schema_rules_v1.txt
+* /job_site/gallery_schema_example_v1.json
+* /mnt/data/worker-execution-manual-v1.1.txt
+  6.7.6 repo_mirror_required: no
+  6.7.7 commit_required: no
+  6.7.8 push_required: no
+
+6.8 required_stage_artifacts:
+
+* /job_site/r2_asset_conventions_v1.txt
+* /job_site/admin_contract_v1.txt
+  6.9 checkpoint_id: CP-S3-ASSET-ADMIN-CONTRACT
+
+7. VALIDATION CHECKS
+   7.1 pass_condition: Both S3 artifacts exist at exact paths and define deterministic R2 asset handling plus deterministic /admin edit contract aligned to the schema.
+   7.2 patch_condition: Missing artifact, ambiguous upload/public URL behavior, or /admin contract exceeds one-page basic scope.
+   7.3 handoff_on_pass: Hand off to Foreman B for checksum of asset/admin alignment, then proceed to S4 on PASS.
+   7.4 handoff_on_patch: Return to Foreman A for S3 correction.
+   7.5 handoff_on_error: Return to Factory Control Interface.
+
+8. STAGE
+   6.1 stage_id: S4
+   6.2 stage_name: Migration Pack And Operator Test Prompts
+   6.3 stage_owner: Foreman A
+   6.4 stage_goal: Finalize the schema-first package with migration instructions from the current JSON and explicit operator test prompts for future Cloudflare/admin implementation.
+   6.5 stage_inputs:
+
+   * S1 through S3 approved artifacts
+
+6.6 worker_a_order
+6.6.1 [JOB-GALLERY-SCHEMA-V1 | WORKER A | S4 | RESULT]
+6.6.2 expected_status: PASS
+6.6.3 task: Produce a migration guide mapping the current product JSON into the new schema, including exact field transformations, deprecated fields, fallback rules, and unresolved placeholders requiring manual admin completion.
+6.6.4 expected_artifacts:
+
+* /job_site/current_json_to_schema_migration_guide.txt
+  6.6.5 required_references:
+* /mnt/data/product_source_of_truth (1).json
+* /job_site/current_to_target_field_map.txt
+* /job_site/gallery_schema_spec_v1.json
+* /job_site/gallery_schema_rules_v1.txt
+* /mnt/data/worker-execution-manual-v1.1.txt
+  6.6.6 repo_mirror_required: no
+  6.6.7 commit_required: no
+  6.6.8 push_required: no
+
+6.7 worker_b_order
+6.7.1 [JOB-GALLERY-SCHEMA-V1 | WORKER B | S4 | RESULT]
+6.7.2 expected_status: PASS
+6.7.3 task: Produce operator test prompts for future Cloudflare-compatible implementation. Include prompts for admin save/load, R2 image upload and public render, card limit enforcement, active/inactive card behavior, checkout config swap, and deployment verification for Workers/Pages plus Cloudflare-routed custom domains.
+6.7.4 expected_artifacts:
+
+* /job_site/operator_test_prompts_v1.txt
+* /job_site/cloudflare_deploy_planning_v1.txt
+  6.7.5 required_references:
+* /job_site/gallery_schema_spec_v1.json
+* /job_site/admin_contract_v1.txt
+* /job_site/r2_asset_conventions_v1.txt
+* /mnt/data/96ec7e95-0ef3-48ac-a306-3d438e0b4478.png
+* /mnt/data/worker-execution-manual-v1.1.txt
+  6.7.6 repo_mirror_required: no
+  6.7.7 commit_required: no
+  6.7.8 push_required: no
+
+6.8 required_stage_artifacts:
+
+* /job_site/current_json_to_schema_migration_guide.txt
+* /job_site/operator_test_prompts_v1.txt
+* /job_site/cloudflare_deploy_planning_v1.txt
+  6.9 checkpoint_id: CP-S4-MIGRATION-TEST-PACK
+
+7. VALIDATION CHECKS
+   7.1 pass_condition: All S4 artifacts exist at exact paths and explicitly cover migration steps, operator tests, and Cloudflare deployment planning for Workers/Pages, R2, and custom domains.
+   7.2 patch_condition: Missing artifact, no migration mapping, missing operator test prompts, or no Cloudflare deployment plan.
+   7.3 handoff_on_pass: Hand off to Foreman B for final checksum, then proceed to final validation on PASS.
+   7.4 handoff_on_patch: Return to Foreman A for S4 correction.
+   7.5 handoff_on_error: Return to Factory Control Interface.
+
+8. FINAL VALIDATION
+   8.1 required_inputs:
+
+   * /job_site/schema_field_inventory.txt
+   * /job_site/current_to_target_field_map.txt
+   * /job_site/ui_field_dependency_notes.txt
+   * /job_site/schema_constraints_from_code.txt
+   * /job_site/gallery_schema_spec_v1.json
+   * /job_site/gallery_schema_rules_v1.txt
+   * /job_site/gallery_schema_example_v1.json
+   * /job_site/r2_asset_conventions_v1.txt
+   * /job_site/admin_contract_v1.txt
+   * /job_site/current_json_to_schema_migration_guide.txt
+   * /job_site/operator_test_prompts_v1.txt
+   * /job_site/cloudflare_deploy_planning_v1.txt
+   * /job_site/stage_activity_log.txt
+   * /job_site/schema_checksum_report.txt
+   * /job_site/TPS_REPORT.txt
+     8.2 validation_check_1: Confirm the canonical schema package exists at all declared paths and includes siteConfig, cards, commerceConfig, and meta as the approved top-level structure.
+     8.3 validation_check_2: Confirm the schema package includes deterministic rules for /admin editing, card limits, active/inactive behavior, R2 asset handling, and migration from the current product JSON.
+     8.4 validation_check_3: Confirm operator test prompts and Cloudflare deployment planning exist and cover asset upload, render validation, admin save/load, checkout config change, and deployment/domain checks.
+     8.5 outputs:
+   * Approved schema foundation package in /job_site/
+   * Final checksum report at /job_site/schema_checksum_report.txt
+   * Final TPS report at /job_site/TPS_REPORT.txt
+     8.6 completion_status: PASS only when all declared artifacts exist at exact paths and all stage checksums pass.
+
+9. FOREMAN OUTPUT FORM
+   9.1 job_id:
+   9.2 foreman:
+   9.3 current_stage:
+   9.4 current_pass:
+   9.5 next_stage:
+   9.6 next_owner:
+   9.7 passes_remaining:
+   9.8 status:
+   9.9 current_action:
+   9.10 artifacts:
+   9.11 checkpoint_result:
+   9.12 handoff_instruction:
+   9.13 issue:
+
+10. WORKER DISPATCH FORM
+    10.1 [job_id | WORKER | STAGE | RESULT]
+    10.2 expected_status:
+    10.3 task:
+    10.4 expected_artifacts:
+    10.5 required_references:
+    10.6 repo_mirror_required:
+    10.7 commit_required:
+    10.8 push_required:
+
+11. WORKER RESULT FORM
+    11.1 [job_id | WORKER | STAGE | RESULT]
+    11.2 status:
+    11.3 artifacts:
+    11.4 summary:
+    11.5 issues:
+
+12. TPS REPORT FORM
+    12.1 job_id: JOB-GALLERY-SCHEMA-V1
+    12.2 completion_status:
+    12.3 job_summary:
+    12.4 stage_results:
+    12.5 artifact_summary:
+    12.6 patch_history:
+    12.7 closeout_note:
+
+13. REFERENCE MATERIAL
+    13.1 job_site: /job_site/
+    13.2 target_file_system: /job_site/
+    13.3 factory_manual: /mnt/data/factory-manual-v1.11.txt
+    13.4 foreman_manual: /mnt/data/foreman-manual-v1.11.txt
+    13.5 worker_execution_manual: /mnt/data/worker-execution-manual-v1.1.txt
+    13.6 active_build_sheet: /job_site/build_sheet.txt
+    13.7 reference_repo_1:
+    13.7.1 url:
+    13.7.2 reference_use: Attached gallery code archive for field dependency review
+    13.8 reference_repo_2:
+    13.8.1 url:
+    13.8.2 reference_use: Attached current product JSON for migration mapping
+    13.9 reference_repo_3:
+    13.9.1 url:
+    13.9.2 reference_use: Attached Cloudflare R2 screenshot for asset/deploy conventions
+
+FORM LAW BLOCK
+L1. stage numbering must use S1, S2, S3 format only
+L2. field numbering must use 1.1, 1.2, 1.3 format only
+L3. foreman status values allowed: PASS | PATCH | ERROR
+L4. worker status values allowed: PASS | PATCH
+L5. unused fields must remain blank
+L6. do not delete fields from the template
+L7. all expected_artifacts must be exact target paths
+L8. worker dispatch tag must exactly match worker result tag format
+L9. required_references only in worker orders
+L10. all file writes must use declared target paths only

@@ -1,0 +1,685 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://job_site/gallery_schema_spec_v1.json",
+  "title": "Gallery JSON Source-of-Truth Schema v1",
+  "description": "Canonical schema for gallery/swipe storefronts. Four top-level objects: siteConfig, cards, commerceConfig, meta. Drives gallery rendering, /admin editing, R2-hosted media references, checkout configuration, and dataset metadata.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["siteConfig", "cards", "commerceConfig", "meta"],
+  "properties": {
+    "siteConfig": { "$ref": "#/definitions/siteConfig" },
+    "cards": {
+      "type": "array",
+      "description": "Ordered list of gallery cards. Count is enforced against siteConfig.packageCardLimit at validation time.",
+      "minItems": 0,
+      "maxItems": 500,
+      "items": { "$ref": "#/definitions/card" }
+    },
+    "commerceConfig": { "$ref": "#/definitions/commerceConfig" },
+    "meta": { "$ref": "#/definitions/meta" }
+  },
+
+  "definitions": {
+
+    "siteConfig": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "siteId",
+        "siteName",
+        "brandName",
+        "layoutMode",
+        "active",
+        "packageTier",
+        "packageCardLimit",
+        "defaultCurrency",
+        "theme"
+      ],
+      "properties": {
+        "siteId": {
+          "type": "string",
+          "description": "Stable unique site identifier. Immutable after first publish.",
+          "pattern": "^[a-z0-9][a-z0-9-]{1,62}[a-z0-9]$",
+          "minLength": 3,
+          "maxLength": 64
+        },
+        "siteName": {
+          "type": "string",
+          "description": "Operator-facing storefront name.",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "brandName": {
+          "type": "string",
+          "description": "Customer-facing brand label rendered in the gallery chrome (replaces hardcoded 'Factory Product Gallery').",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "heroTitle": {
+          "type": "string",
+          "maxLength": 160
+        },
+        "heroSubtitle": {
+          "type": "string",
+          "maxLength": 240
+        },
+        "tagline": {
+          "type": "string",
+          "maxLength": 200
+        },
+        "layoutMode": {
+          "type": "string",
+          "enum": ["gallery", "swipe", "grid"],
+          "description": "Controls top-level card layout."
+        },
+        "active": {
+          "type": "boolean",
+          "description": "Storefront-level live/offline flag. When false the site renders an offline placeholder and all cards are suppressed regardless of per-card state."
+        },
+        "packageTier": {
+          "type": "string",
+          "enum": ["starter", "studio", "pro", "enterprise", "custom"],
+          "description": "Package/plan identifier used to enforce limits and features."
+        },
+        "packageCardLimit": {
+          "type": "integer",
+          "description": "Hard cap on the number of cards[] entries with status=active for this site. Set by package tier. See rules R-LIMIT-*.",
+          "minimum": 0,
+          "maximum": 500
+        },
+        "defaultCurrency": {
+          "type": "string",
+          "description": "ISO-4217 currency used when a card or commerceConfig omits currency.",
+          "pattern": "^[A-Z]{3}$",
+          "default": "USD"
+        },
+        "locale": {
+          "type": "string",
+          "description": "BCP-47 locale tag.",
+          "pattern": "^[a-z]{2,3}(-[A-Za-z0-9]{2,8})*$",
+          "default": "en-US"
+        },
+        "timezone": {
+          "type": "string",
+          "description": "IANA timezone id.",
+          "default": "UTC"
+        },
+        "customDomain": {
+          "type": ["string", "null"],
+          "description": "Operator-assigned custom domain served by Cloudflare.",
+          "pattern": "^(?=.{1,253}$)([a-z0-9]([a-z0-9-]*[a-z0-9])?\\.)+[a-z]{2,}$"
+        },
+        "contactEmail": {
+          "type": ["string", "null"],
+          "format": "email",
+          "maxLength": 254
+        },
+        "logo": {
+          "anyOf": [{ "$ref": "#/definitions/mediaRef" }, { "type": "null" }]
+        },
+        "favicon": {
+          "anyOf": [{ "$ref": "#/definitions/mediaRef" }, { "type": "null" }]
+        },
+        "theme": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["mode"],
+          "properties": {
+            "mode": {
+              "type": "string",
+              "enum": ["light", "dark", "system"],
+              "default": "light"
+            },
+            "primaryColor": { "$ref": "#/definitions/hexColor" },
+            "accentColor": { "$ref": "#/definitions/hexColor" },
+            "background": { "$ref": "#/definitions/hexColor" },
+            "foreground": { "$ref": "#/definitions/hexColor" },
+            "surface": { "$ref": "#/definitions/hexColor" },
+            "border": { "$ref": "#/definitions/hexColor" }
+          }
+        },
+        "fallbacks": {
+          "type": "object",
+          "description": "Runtime fallback behavior for missing per-card assets.",
+          "additionalProperties": false,
+          "properties": {
+            "useDesktopImagesOnMobile": {
+              "type": "boolean",
+              "default": true,
+              "description": "If true, card.media entries with role='mobile' are optional and desktop gallery media is rendered on mobile when mobile set is empty."
+            }
+          }
+        }
+      }
+    },
+
+    "card": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "sku",
+        "title",
+        "tagline",
+        "outcome",
+        "bullets",
+        "mainImage",
+        "media",
+        "cta",
+        "pricing",
+        "status",
+        "active",
+        "orderIndex",
+        "createdAt",
+        "updatedAt"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Stable unique card identifier. Consumed verbatim as PayMe line_item product_id prefix (e.g. `${id}_setup`). Must round-trip unchanged.",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{1,62}[A-Za-z0-9]$",
+          "minLength": 3,
+          "maxLength": 64
+        },
+        "sku": {
+          "type": "string",
+          "description": "Commerce-facing stock keeping unit. Often equal to the legacy productNumber. Unique within cards[].",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "title": {
+          "type": "string",
+          "description": "Card title. Also slugified to the route id; slug must be unique across cards[].",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "tagline": {
+          "type": "string",
+          "description": "Short marketing line (maps from current oneLinePromise).",
+          "minLength": 1,
+          "maxLength": 160
+        },
+        "description": {
+          "type": "string",
+          "description": "Long-form description. When absent, UIs fall back to tagline.",
+          "maxLength": 1000
+        },
+        "outcome": {
+          "type": "string",
+          "description": "Buyer outcome / benefit statement (maps from current buyerOutcome).",
+          "minLength": 1,
+          "maxLength": 240
+        },
+        "bullets": {
+          "type": "array",
+          "description": "Feature bullets. TS chassis enforces >=3 entries.",
+          "minItems": 3,
+          "maxItems": 8,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          }
+        },
+        "mainImage": { "$ref": "#/definitions/mediaRef" },
+        "thumbnail": {
+          "anyOf": [{ "$ref": "#/definitions/mediaRef" }, { "type": "null" }]
+        },
+        "media": {
+          "type": "array",
+          "description": "Ordered media collection for the card (gallery, mobile, thumbnail). Must have at least one entry.",
+          "minItems": 1,
+          "maxItems": 20,
+          "items": { "$ref": "#/definitions/mediaAsset" }
+        },
+        "cta": { "$ref": "#/definitions/cta" },
+        "pricing": { "$ref": "#/definitions/pricing" },
+        "tags": {
+          "type": "array",
+          "maxItems": 20,
+          "items": { "type": "string", "minLength": 1, "maxLength": 40 },
+          "default": []
+        },
+        "badges": {
+          "type": "array",
+          "description": "Short marketing flags, e.g. 'new', 'featured'.",
+          "maxItems": 6,
+          "items": { "type": "string", "minLength": 1, "maxLength": 24 },
+          "default": []
+        },
+        "promoCode": {
+          "type": ["string", "null"],
+          "description": "Per-card promo code. Valid only when every card in cart shares the same code.",
+          "maxLength": 32
+        },
+        "promoDiscountPercent": {
+          "type": ["number", "null"],
+          "description": "Percent off setupPrice when promoCode applies. 0-100.",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "status": {
+          "type": "string",
+          "enum": ["draft", "active", "inactive"],
+          "description": "Editorial lifecycle state. Only status=active counts toward packageCardLimit and is visible to visitors."
+        },
+        "active": {
+          "type": "boolean",
+          "description": "Runtime visibility flag. Must be true when status=active; must be false when status in {draft,inactive}."
+        },
+        "orderIndex": {
+          "type": "integer",
+          "description": "Explicit 0-based display order within cards[]. Must be unique across cards.",
+          "minimum": 0,
+          "maximum": 999
+        },
+        "liveDemoUrl": {
+          "type": ["string", "null"],
+          "format": "uri",
+          "maxLength": 2048
+        },
+        "videoDemoUrl": {
+          "type": ["string", "null"],
+          "format": "uri",
+          "maxLength": 2048
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+
+    "mediaAsset": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "role", "orderIndex"],
+      "description": "Structured media entry. Exactly one of url or r2Key must be present.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{1,62}[A-Za-z0-9]$",
+          "minLength": 3,
+          "maxLength": 64
+        },
+        "role": {
+          "type": "string",
+          "enum": ["main", "gallery", "mobile", "thumbnail"]
+        },
+        "orderIndex": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 99
+        },
+        "url": {
+          "type": ["string", "null"],
+          "description": "Absolute or root-relative URL consumed directly by <img src>. No client-side rewriting is performed.",
+          "maxLength": 2048
+        },
+        "r2Key": {
+          "type": ["string", "null"],
+          "description": "Cloudflare R2 object key. Resolved to a public URL at publish time per r2_asset_conventions.",
+          "maxLength": 1024
+        },
+        "alt": {
+          "type": "string",
+          "default": "",
+          "maxLength": 240
+        },
+        "width": {
+          "type": ["integer", "null"],
+          "minimum": 1,
+          "maximum": 16384
+        },
+        "height": {
+          "type": ["integer", "null"],
+          "minimum": 1,
+          "maximum": 16384
+        },
+        "mime": {
+          "type": ["string", "null"],
+          "enum": [
+            null,
+            "image/png",
+            "image/jpeg",
+            "image/webp",
+            "image/avif",
+            "image/gif",
+            "image/svg+xml"
+          ]
+        }
+      },
+      "oneOf": [
+        { "required": ["url"], "not": { "required": ["r2Key"] } },
+        { "required": ["r2Key"], "not": { "required": ["url"] } }
+      ]
+    },
+
+    "mediaRef": {
+      "type": "object",
+      "description": "Compact media reference used by single-asset fields (mainImage, thumbnail, logo, favicon). Exactly one of url or r2Key.",
+      "additionalProperties": false,
+      "required": ["role"],
+      "properties": {
+        "role": {
+          "type": "string",
+          "enum": ["main", "thumbnail", "logo", "favicon"]
+        },
+        "url": { "type": ["string", "null"], "maxLength": 2048 },
+        "r2Key": { "type": ["string", "null"], "maxLength": 1024 },
+        "alt": { "type": "string", "default": "", "maxLength": 240 },
+        "width": { "type": ["integer", "null"], "minimum": 1, "maximum": 16384 },
+        "height": { "type": ["integer", "null"], "minimum": 1, "maximum": 16384 },
+        "mime": {
+          "type": ["string", "null"],
+          "enum": [
+            null,
+            "image/png",
+            "image/jpeg",
+            "image/webp",
+            "image/avif",
+            "image/gif",
+            "image/svg+xml",
+            "image/x-icon"
+          ]
+        }
+      },
+      "oneOf": [
+        { "required": ["url"], "not": { "required": ["r2Key"] } },
+        { "required": ["r2Key"], "not": { "required": ["url"] } }
+      ]
+    },
+
+    "cta": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "label"],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": ["internal", "external"]
+        },
+        "label": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 40,
+          "default": "View"
+        },
+        "internalPath": {
+          "type": ["string", "null"],
+          "description": "In-app route. Required when kind=internal.",
+          "pattern": "^/[A-Za-z0-9/_-]{1,255}$",
+          "maxLength": 256
+        },
+        "externalUrl": {
+          "type": ["string", "null"],
+          "description": "Absolute URL. Required when kind=external.",
+          "format": "uri",
+          "maxLength": 2048
+        }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "kind": { "const": "internal" } } },
+          "then": { "required": ["internalPath"] }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "external" } } },
+          "then": { "required": ["externalUrl"] }
+        }
+      ]
+    },
+
+    "pricing": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["setup", "monthly", "currency", "interval"],
+      "description": "Card pricing. setup and monthly are in whole currency units (USD dollars, not cents). Zero values are valid and drop the corresponding checkout line item.",
+      "properties": {
+        "setup": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1000000,
+          "multipleOf": 0.01
+        },
+        "monthly": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1000000,
+          "multipleOf": 0.01
+        },
+        "currency": {
+          "type": "string",
+          "pattern": "^[A-Z]{3}$",
+          "default": "USD"
+        },
+        "interval": {
+          "type": "string",
+          "enum": ["month", "year", "none"],
+          "default": "month"
+        },
+        "intervalLabel": {
+          "type": "string",
+          "default": "mo",
+          "maxLength": 8
+        },
+        "price": {
+          "type": ["number", "null"],
+          "description": "Legacy field kept for back-compat (written on every fixture, read by no UI). Must be accepted on input.",
+          "minimum": 0,
+          "maximum": 1000000
+        },
+        "trial": {
+          "type": ["object", "null"],
+          "additionalProperties": false,
+          "properties": {
+            "days": { "type": "integer", "minimum": 0, "maximum": 365 }
+          }
+        },
+        "taxInclusive": {
+          "type": "boolean",
+          "default": false
+        }
+      }
+    },
+
+    "commerceConfig": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "provider",
+        "mode",
+        "currency",
+        "checkoutCreateUrl",
+        "checkoutStatusUrl",
+        "sourceApp",
+        "paymentMethods",
+        "usdc"
+      ],
+      "properties": {
+        "provider": {
+          "type": "string",
+          "enum": ["payme", "stripe", "placeholder"],
+          "default": "payme"
+        },
+        "mode": {
+          "type": "string",
+          "enum": ["test", "live"],
+          "default": "test"
+        },
+        "currency": {
+          "type": "string",
+          "pattern": "^[A-Z]{3}$",
+          "default": "USD",
+          "description": "Single ISO currency for checkout. UI presently assumes one per dataset."
+        },
+        "publishableKey": {
+          "type": ["string", "null"],
+          "maxLength": 256
+        },
+        "checkoutCreateUrl": {
+          "type": "string",
+          "format": "uri",
+          "maxLength": 2048,
+          "description": "Replaces hardcoded 'https://api.xyz-labs.xyz/checkout/create' in CartCheckoutBoundary."
+        },
+        "checkoutStatusUrl": {
+          "type": "string",
+          "format": "uri",
+          "maxLength": 2048,
+          "description": "Replaces hardcoded 'https://api.xyz-labs.xyz/checkout/status' in CheckoutConfirmPage."
+        },
+        "successUrlTemplate": {
+          "type": "string",
+          "description": "Template string supporting {origin}. Default: '{origin}/checkout/confirm'.",
+          "default": "{origin}/checkout/confirm",
+          "maxLength": 2048
+        },
+        "cancelUrlTemplate": {
+          "type": "string",
+          "default": "{origin}/cart",
+          "maxLength": 2048
+        },
+        "sourceApp": {
+          "type": "string",
+          "description": "Value sent as metadata.source_app. Default matches VITE_PAYME_SOURCE_APP fallback.",
+          "default": "gallery",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "checkoutMode": {
+          "type": "string",
+          "enum": ["subscription", "payment"],
+          "default": "subscription",
+          "description": "Boundary always sends 'subscription' today. Schema preserves that default."
+        },
+        "paymentMethods": {
+          "type": "array",
+          "description": "Exact enum consumed by PayMeCheckoutCard.",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "enum": ["card", "apple_pay", "google_pay", "usdc"]
+          },
+          "default": ["card", "apple_pay", "google_pay", "usdc"]
+        },
+        "couponsEnabled": { "type": "boolean", "default": true },
+        "subscriptionsEnabled": { "type": "boolean", "default": true },
+        "taxMode": {
+          "type": "string",
+          "enum": ["inclusive", "exclusive", "none"],
+          "default": "none"
+        },
+        "webhookRef": {
+          "type": ["string", "null"],
+          "maxLength": 256
+        },
+        "promos": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Global promo table. Matches compiled-in GLOBAL_PROMOS but schema-sourced.",
+          "properties": {
+            "launchParty": { "$ref": "#/definitions/promo" },
+            "usdc": { "$ref": "#/definitions/promo" }
+          }
+        },
+        "usdc": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["receiveAddress", "contract", "decimals", "chainId"],
+          "description": "USDC/BASE settings. Admin override remains in localStorage 'payme_usdc_address' and is not part of this dataset.",
+          "properties": {
+            "receiveAddress": {
+              "type": "string",
+              "pattern": "^0x[a-fA-F0-9]{40}$",
+              "description": "Default receive address (localStorage override takes precedence at runtime)."
+            },
+            "contract": {
+              "type": "string",
+              "pattern": "^0x[a-fA-F0-9]{40}$",
+              "default": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"
+            },
+            "decimals": {
+              "type": "integer",
+              "const": 6
+            },
+            "chainId": {
+              "type": "integer",
+              "const": 8453
+            }
+          }
+        }
+      }
+    },
+
+    "promo": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "percentOff", "label"],
+      "properties": {
+        "code": { "type": "string", "minLength": 1, "maxLength": 32 },
+        "percentOff": { "type": "number", "minimum": 0, "maximum": 100 },
+        "label": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "stacks": {
+          "type": "boolean",
+          "default": false,
+          "description": "If true (USDC case), applies on top of already-discounted total."
+        },
+        "methodScope": {
+          "type": ["string", "null"],
+          "enum": [null, "card", "apple_pay", "google_pay", "usdc"],
+          "description": "When set, promo only applies when the chosen payment method matches."
+        }
+      }
+    },
+
+    "meta": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schemaVersion", "generatedAt", "updatedAt", "source", "environment"],
+      "properties": {
+        "schemaVersion": {
+          "type": "string",
+          "const": "gallery-schema-v1",
+          "description": "Version tag. Independent of localStorage key 'artist-connect.estimate.v1'."
+        },
+        "generatedAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "lastPublishedAt": {
+          "type": ["string", "null"],
+          "format": "date-time"
+        },
+        "updatedBy": {
+          "type": ["string", "null"],
+          "maxLength": 128
+        },
+        "source": {
+          "type": "string",
+          "enum": ["manual", "admin", "migration"]
+        },
+        "environment": {
+          "type": "string",
+          "enum": ["dev", "staging", "prod"]
+        },
+        "deploymentRef": {
+          "type": ["string", "null"],
+          "maxLength": 128
+        },
+        "notes": {
+          "type": ["string", "null"],
+          "maxLength": 2000
+        }
+      }
+    },
+
+    "hexColor": {
+      "type": "string",
+      "pattern": "^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{8})$"
+    }
+  }
+}

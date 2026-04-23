@@ -1,0 +1,305 @@
+ADMIN CONTRACT v1
+job_id: JOB-GALLERY-SCHEMA-V1
+worker: WORKER B
+stage: S3
+scope: Section A = editable fields and direct schema paths.
+       Section B = card create/update/deactivate rules,
+                   package-limit enforcement, save/load expectations.
+companion_schema: /job_site/gallery_schema_spec_v1.json
+companion_rules:  /job_site/gallery_schema_rules_v1.txt
+
+LEGEND
+  E   = editable in /admin
+  E*  = editable on create only (immutable after first publish)
+  R   = read-only (system-managed / derived / const)
+  Path is JSON-pointer-style into the dataset root.
+
+================================================================
+SECTION A - EDITABLE FIELDS AND SCHEMA PATHS
+================================================================
+
+----------------------------------------------------------------
+A.1 siteConfig
+----------------------------------------------------------------
+E*  siteId                                    siteConfig.siteId
+E   siteName                                  siteConfig.siteName
+E   brandName                                 siteConfig.brandName
+E   heroTitle                                 siteConfig.heroTitle
+E   heroSubtitle                              siteConfig.heroSubtitle
+E   tagline                                   siteConfig.tagline
+E   layoutMode                                siteConfig.layoutMode
+E   active                                    siteConfig.active
+E   packageTier                               siteConfig.packageTier
+E   packageCardLimit                          siteConfig.packageCardLimit
+E   defaultCurrency                           siteConfig.defaultCurrency
+E   locale                                    siteConfig.locale
+E   timezone                                  siteConfig.timezone
+E   customDomain                              siteConfig.customDomain
+E   contactEmail                              siteConfig.contactEmail
+E   logo.url                                  siteConfig.logo.url
+E   logo.r2Key                                siteConfig.logo.r2Key
+E   logo.role                                 siteConfig.logo.role
+E   logo.alt                                  siteConfig.logo.alt
+E   logo.width                                siteConfig.logo.width
+E   logo.height                               siteConfig.logo.height
+E   logo.mime                                 siteConfig.logo.mime
+E   favicon.url                               siteConfig.favicon.url
+E   favicon.r2Key                             siteConfig.favicon.r2Key
+E   favicon.role                              siteConfig.favicon.role
+E   favicon.alt                               siteConfig.favicon.alt
+E   favicon.width                             siteConfig.favicon.width
+E   favicon.height                            siteConfig.favicon.height
+E   favicon.mime                              siteConfig.favicon.mime
+E   theme.mode                                siteConfig.theme.mode
+E   theme.primaryColor                        siteConfig.theme.primaryColor
+E   theme.accentColor                         siteConfig.theme.accentColor
+E   theme.background                          siteConfig.theme.background
+E   theme.foreground                          siteConfig.theme.foreground
+E   theme.surface                             siteConfig.theme.surface
+E   theme.border                              siteConfig.theme.border
+E   fallbacks.useDesktopImagesOnMobile        siteConfig.fallbacks.useDesktopImagesOnMobile
+
+----------------------------------------------------------------
+A.2 cards  (repeated per entry; index i)
+----------------------------------------------------------------
+E*  id                                        cards[i].id
+E   sku                                       cards[i].sku
+E   title                                     cards[i].title
+E   tagline                                   cards[i].tagline
+E   description                               cards[i].description
+E   outcome                                   cards[i].outcome
+E   bullets[]                                 cards[i].bullets
+E   tags[]                                    cards[i].tags
+E   badges[]                                  cards[i].badges
+E   promoCode                                 cards[i].promoCode
+E   promoDiscountPercent                      cards[i].promoDiscountPercent
+E   status                                    cards[i].status
+R   active                                    cards[i].active          (mirror of status)
+E   orderIndex                                cards[i].orderIndex
+E   liveDemoUrl                               cards[i].liveDemoUrl
+E   videoDemoUrl                              cards[i].videoDemoUrl
+R   createdAt                                 cards[i].createdAt
+R   updatedAt                                 cards[i].updatedAt
+
+  mainImage (single-asset):
+E   mainImage.role                            cards[i].mainImage.role
+E   mainImage.url                             cards[i].mainImage.url
+E   mainImage.r2Key                           cards[i].mainImage.r2Key
+E   mainImage.alt                             cards[i].mainImage.alt
+E   mainImage.width                           cards[i].mainImage.width
+E   mainImage.height                          cards[i].mainImage.height
+E   mainImage.mime                            cards[i].mainImage.mime
+
+  thumbnail (single-asset, nullable):
+E   thumbnail.role                            cards[i].thumbnail.role
+E   thumbnail.url                             cards[i].thumbnail.url
+E   thumbnail.r2Key                           cards[i].thumbnail.r2Key
+E   thumbnail.alt                             cards[i].thumbnail.alt
+E   thumbnail.width                           cards[i].thumbnail.width
+E   thumbnail.height                          cards[i].thumbnail.height
+E   thumbnail.mime                            cards[i].thumbnail.mime
+
+  media[] (repeated per entry; index j):
+E*  media[j].id                               cards[i].media[j].id
+E   media[j].role                             cards[i].media[j].role
+E   media[j].orderIndex                       cards[i].media[j].orderIndex
+E   media[j].url                              cards[i].media[j].url
+E   media[j].r2Key                            cards[i].media[j].r2Key
+E   media[j].alt                              cards[i].media[j].alt
+E   media[j].width                            cards[i].media[j].width
+E   media[j].height                           cards[i].media[j].height
+E   media[j].mime                             cards[i].media[j].mime
+
+  cta:
+E   cta.kind                                  cards[i].cta.kind
+E   cta.label                                 cards[i].cta.label
+E   cta.internalPath                          cards[i].cta.internalPath
+E   cta.externalUrl                           cards[i].cta.externalUrl
+
+  pricing:
+E   pricing.setup                             cards[i].pricing.setup
+E   pricing.monthly                           cards[i].pricing.monthly
+E   pricing.currency                          cards[i].pricing.currency
+E   pricing.interval                          cards[i].pricing.interval
+E   pricing.intervalLabel                     cards[i].pricing.intervalLabel
+R   pricing.price                             cards[i].pricing.price    (legacy, write-through only)
+E   pricing.trial.days                        cards[i].pricing.trial.days
+E   pricing.taxInclusive                      cards[i].pricing.taxInclusive
+
+----------------------------------------------------------------
+A.3 commerceConfig
+----------------------------------------------------------------
+E   provider                                  commerceConfig.provider
+E   mode                                      commerceConfig.mode
+E   currency                                  commerceConfig.currency
+E   publishableKey                            commerceConfig.publishableKey
+E   checkoutCreateUrl                         commerceConfig.checkoutCreateUrl
+E   checkoutStatusUrl                         commerceConfig.checkoutStatusUrl
+E   successUrlTemplate                        commerceConfig.successUrlTemplate
+E   cancelUrlTemplate                         commerceConfig.cancelUrlTemplate
+E   sourceApp                                 commerceConfig.sourceApp
+E   checkoutMode                              commerceConfig.checkoutMode
+E   paymentMethods[]                          commerceConfig.paymentMethods
+E   couponsEnabled                            commerceConfig.couponsEnabled
+E   subscriptionsEnabled                      commerceConfig.subscriptionsEnabled
+E   taxMode                                   commerceConfig.taxMode
+E   webhookRef                                commerceConfig.webhookRef
+
+  promos.launchParty:
+E   promos.launchParty.code                   commerceConfig.promos.launchParty.code
+E   promos.launchParty.percentOff             commerceConfig.promos.launchParty.percentOff
+E   promos.launchParty.label                  commerceConfig.promos.launchParty.label
+E   promos.launchParty.stacks                 commerceConfig.promos.launchParty.stacks
+E   promos.launchParty.methodScope            commerceConfig.promos.launchParty.methodScope
+
+  promos.usdc:
+E   promos.usdc.code                          commerceConfig.promos.usdc.code
+E   promos.usdc.percentOff                    commerceConfig.promos.usdc.percentOff
+E   promos.usdc.label                         commerceConfig.promos.usdc.label
+E   promos.usdc.stacks                        commerceConfig.promos.usdc.stacks
+E   promos.usdc.methodScope                   commerceConfig.promos.usdc.methodScope
+
+  usdc:
+E   usdc.receiveAddress                       commerceConfig.usdc.receiveAddress
+E   usdc.contract                             commerceConfig.usdc.contract
+R   usdc.decimals                             commerceConfig.usdc.decimals      (const 6)
+R   usdc.chainId                              commerceConfig.usdc.chainId       (const 8453)
+
+----------------------------------------------------------------
+A.4 meta
+----------------------------------------------------------------
+R   schemaVersion                             meta.schemaVersion      (const "gallery-schema-v1")
+R   generatedAt                               meta.generatedAt
+R   updatedAt                                 meta.updatedAt
+R   lastPublishedAt                           meta.lastPublishedAt
+R   updatedBy                                 meta.updatedBy
+E   source                                    meta.source
+E   environment                               meta.environment
+R   deploymentRef                             meta.deploymentRef
+E   notes                                     meta.notes
+
+================================================================
+SECTION B - RULES AND BEHAVIOR
+================================================================
+
+----------------------------------------------------------------
+B.1 CARD CREATE
+----------------------------------------------------------------
+C-CREATE-01  Admin allocates cards[i].id (pattern per R-CARD-03);
+             unique across cards[] (R-CARD-04). Immutable once saved.
+C-CREATE-02  sku unique across cards[] (R-CARD-05).
+C-CREATE-03  title required; slug(title) unique across cards[]
+             (R-CARD-06).
+C-CREATE-04  bullets: >=3, <=8 (R-CARD-07).
+C-CREATE-05  mainImage required; media[] has >=1 entry (R-CARD-09,10).
+C-CREATE-06  cta.kind selects required leg: internal=>internalPath,
+             external=>externalUrl (R-CARD-14).
+C-CREATE-07  Default status="draft", active=false. If created with
+             status="active", limit check per C-LIMIT-01 applies.
+C-CREATE-08  orderIndex: admin assigns next free integer in [0,999],
+             unique across cards[] (R-CARD-22).
+C-CREATE-09  createdAt = updatedAt = now (ISO-8601 UTC, R-ROOT-02).
+C-CREATE-10  pricing.setup/monthly in whole currency units
+             (R-ROOT-03, R-CARD-15). pricing.price mirrored from
+             pricing.setup for legacy write-through (R-CARD-18).
+
+----------------------------------------------------------------
+B.2 CARD UPDATE
+----------------------------------------------------------------
+C-UPDATE-01 id, createdAt never change after create.
+C-UPDATE-02 active is derived from status; never set directly
+             (R-CARD-21). status transitions per R-STATE-05.
+C-UPDATE-03 status: draft|inactive -> active is a limit-gated
+             transition (C-LIMIT-02).
+C-UPDATE-04 Renaming title changes slug and orphans cart/estimate
+             entries. Admin SHOULD warn; MUST NOT block (R-CARD-24).
+C-UPDATE-05 promoCode and promoDiscountPercent are co-required:
+             both null or both non-null (R-CARD-19).
+C-UPDATE-06 Any mutation sets cards[i].updatedAt and meta.updatedAt
+             (R-META-04, R-STATE-05).
+C-UPDATE-07 Changing pricing.currency does not retroactively convert
+             amounts; admin presents numeric value as-is.
+C-UPDATE-08 media[] edits preserve per-role orderIndex uniqueness
+             (R-CARD-12) and at-most-one main/thumbnail (R-CARD-11).
+             Exactly one of url|r2Key per entry (R-CARD-10).
+
+----------------------------------------------------------------
+B.3 CARD DEACTIVATE / DELETE
+----------------------------------------------------------------
+C-DEACT-01  Deactivation = status: active -> inactive. Card, media,
+             and pricing are preserved (R-CARD-23). Frees one slot
+             under packageCardLimit (R-STATE-05).
+C-DEACT-02  status=inactive hides card from public surfaces and 404s
+             the slug route (R-STATE-03). Card remains editable.
+C-DEACT-03  status=draft hides card from all public surfaces and
+             frees a slot if previously active (R-STATE-04, 05).
+C-DEACT-04  Delete is a distinct destructive action (R-STATE-06).
+             Admin MUST require explicit confirmation, remove the
+             cards[] entry, and set meta.updatedAt. Delete does NOT
+             bypass limit rules (limit is on active count, not total).
+
+----------------------------------------------------------------
+B.4 PACKAGE-LIMIT ENFORCEMENT
+----------------------------------------------------------------
+C-LIMIT-01  On save/publish: count(cards[].status=="active") MUST be
+             <= siteConfig.packageCardLimit (R-LIMIT-02). Over-limit
+             datasets are rejected.
+C-LIMIT-02  Admin MUST reject activation (draft|inactive -> active)
+             when already at the limit, surfacing a user-facing error
+             citing R-LIMIT-04.
+C-LIMIT-03  Admin MUST reject reducing packageCardLimit below the
+             current active count (R-LIMIT-06). Operator must
+             deactivate first.
+C-LIMIT-04  Drafts and inactive cards do not count (R-LIMIT-03).
+             cards[] hard max is 500 regardless of tier.
+C-LIMIT-05  packageTier selection MAY suggest a default
+             packageCardLimit (R-LIMIT-05); admin does not auto-apply
+             it over an explicit value.
+C-LIMIT-06  siteConfig.active=false does not exempt the save-time
+             limit check (R-STATE-01).
+
+----------------------------------------------------------------
+B.5 SAVE
+----------------------------------------------------------------
+C-SAVE-01   Save validates the full dataset against
+             gallery_schema_spec_v1.json plus cross-field rules
+             enumerated in R-VAL-01. Failing validation blocks save.
+C-SAVE-02   Save stamps meta.updatedAt = now. Does NOT update
+             meta.lastPublishedAt.
+C-SAVE-03   Save sets meta.source="admin" and meta.updatedBy to the
+             authenticated admin identifier.
+C-SAVE-04   meta.schemaVersion MUST remain "gallery-schema-v1"
+             (R-META-02). Admin never writes this field.
+C-SAVE-05   Errors are reported with rule ids (R-VAL-02) and the
+             offending JSON path. No partial writes.
+
+----------------------------------------------------------------
+B.6 PUBLISH
+----------------------------------------------------------------
+C-PUB-01    Publish re-runs C-SAVE-01 validation before promotion.
+C-PUB-02    Publish stamps meta.lastPublishedAt = now (R-META-05)
+             and meta.updatedAt = now.
+C-PUB-03    Publish locks siteConfig.siteId permanently (R-SITE-02).
+C-PUB-04    Publish resolves media[].r2Key / mediaRef.r2Key to
+             public URLs per r2_asset_conventions at publish time.
+
+----------------------------------------------------------------
+B.7 LOAD
+----------------------------------------------------------------
+C-LOAD-01   Admin loads the canonical dataset and presents it using
+             the Section A mapping. Read-only (R) fields render
+             disabled.
+C-LOAD-02   Unknown or additional top-level keys cause a load error
+             (R-ROOT-01, additionalProperties=false).
+C-LOAD-03   Legacy pricing.price is displayed read-only and
+             round-tripped unchanged (R-CARD-18).
+C-LOAD-04   Schema-only warnings (R-VAL-03) render as non-blocking
+             notices: missing optional media width/height/mime,
+             missing mobile media when fallbacks=false, missing
+             thumbnail on an active card.
+C-LOAD-05   Date fields render in siteConfig.timezone; stored values
+             remain ISO-8601 UTC (R-ROOT-02).
+
+================================================================
+END OF ADMIN CONTRACT v1
+================================================================
